@@ -1,0 +1,256 @@
+<!-- /*********************************************************************************************
+ * Copyright © 2025, Oracle and/or its LST Consultancy Pvt. Ltd., All rights reserved.
+ *
+ * Name:           LSTCPTR Manually Upload HTML File  (lstcptr_splitScreenSuitelet.html)
+ *
+ * Version:         1.0.0   -   14-July-2025 - RS      Initial Development
+ *
+ * Author:          LiveStrong Technologies
+ *
+ * Purpose:         HTML UI for Show Update Vendor Bill Staging Record In Split View.
+ *
+ *********************************************************************************************/ -->
+
+<html>
+    <style>
+        .container {
+            display: flex;
+            height: 90vh;
+        }
+        .left-panel {
+            width: 40%;
+            padding: 10px;
+            overflow: auto;
+        }
+        .right-panel {
+            width: 60%;
+            margin-top: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: start;
+        }
+        .form-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+        .form-field {
+            margin-bottom: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2px;
+            font-size: 14px;
+        }
+        select, input, textarea {
+            width: 50%;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+        .button-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .button-secondary {
+            background-color: gray;
+            color: white;
+        }
+        .email-container {
+            display: none;
+            width: 30%;
+            padding: 10px;
+            border-left: 1px solid #ccc;
+            margin-top: 10px;
+            position: relative;
+        }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+        }
+        .toggle-switch input {
+            display: none;
+        }
+        .toggle-slider {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #ccc;
+            border-radius: 25px;
+            transition: 0.3s;
+        }
+        .toggle-slider:before {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            top: 2.5px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        input:checked + .toggle-slider {
+            background: #007bff;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(25px);
+        }
+    </style>
+    <div class="container">
+        <div class="left-panel" id="pdfContainer">
+            ${fileDisplayHtml}
+        </div>
+        <div class="right-panel" id="right-panel">
+            <div class="form-title">Bill To Process</div>
+            <div class="toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="display-email-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="margin-left: 10px; font-weight: bold;">Display Email</span>
+            </div>
+            <div class="form-field">
+                <input type="hidden" id="${recordIdField}" name="${recordIdField}" value="${recordId}">
+            </div>
+            <div class="form-field">
+                <label>Transaction Type</label>
+                <select id="${transactionTypeField}" name="${transactionTypeField}">${transactionTypeOptionsList}</select>
+            </div>
+            <div class="form-field">
+                <label>Subsidiary</label>
+                <select id="${subsidiaryField}" name="${subsidiaryField}">${subsidiaryOptions}</select>
+            </div>
+            <div class="form-field">
+                <label>Vendor</label>
+                <select id="${vendorField}" name="${vendorField}">${vendorOptions}</select>
+            </div>
+            <div class="form-field" style="display:none;">
+                <label>Amount</label>
+                <input type="number" id="${amountField}" name="${amountField}" value="${amount}" step="0.01" min="0">
+            </div>
+            <div class="form-field" style="display:none;">
+                <label>Document Origin</label>
+                <select id="${documentOriginField}" name="${documentOriginField}">
+                    <option value="">Select document origin...</option>
+                    <option value="${documentOriginNanonet}">${documentOriginNanonet}</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Memo</label>
+                <textarea id="${memoField}" name="${memoField}">${memo || ''}</textarea>
+            </div>
+            <div class="button-group">
+                <button class="button-primary" type="button" id="saveButton">Save</button>
+            </div>
+        </div>
+        <div class="email-container" id="email-container">
+            <div class="form-title"><strong>Email Message</strong></div>
+            ${emailHtmlBody}
+        </div>
+    </div>
+    <script>
+        function submitForm() {
+            console.log("submitForm called");
+            var formData = new URLSearchParams();
+            formData.append("${recordIdField}", document.getElementById('${recordIdField}').value);
+            formData.append("${transactionTypeField}", document.getElementById('${transactionTypeField}').value);
+            formData.append("${subsidiaryField}", document.getElementById('${subsidiaryField}').value);
+            formData.append("${vendorField}", document.getElementById('${vendorField}').value);
+            formData.append("${amountField}", document.getElementById('${amountField}').value);
+            formData.append("${memoField}", document.getElementById('${memoField}').value);
+            console.log("Form Data:", formData.toString());
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            })
+            .then(response => {
+                console.log("Response received:", response);
+                return response.text();
+            })
+            .then(text => {
+                console.log("Raw Response Text:", text);
+                var data = JSON.parse(text);
+                console.log("Parsed Data:", data);
+                if (data.success) {
+                    alert("Record saved successfully!");
+                    window.location.href = data.redirectUrl;
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error during form submission:", error);
+                alert("An error occurred while saving: " + error.message);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM fully loaded");
+            var saveButton = document.getElementById('saveButton');
+            if (saveButton) {
+                console.log("Save button found");
+                saveButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    console.log("Save button clicked");
+                    submitForm();
+                });
+            } else {
+                console.error("Save button not found");
+            }
+
+            var pdfContainer = document.getElementById('pdfContainer');
+            var rightPanel = document.getElementById('right-panel');
+            var emailContainer = document.getElementById('email-container');
+            var toggleButton = document.getElementById('display-email-toggle');
+
+            if (!toggleButton.checked) {
+                pdfContainer.style.width = '60%';
+                rightPanel.style.width = '40%';
+                emailContainer.style.display = 'none';
+            }
+
+            toggleButton.addEventListener('change', function() {
+                if (this.checked) {
+                    pdfContainer.style.width = '40%';
+                    rightPanel.style.width = '30%';
+                    emailContainer.style.display = 'block';
+                } else {
+                    pdfContainer.style.width = '60%';
+                    rightPanel.style.width = '40%';
+                    emailContainer.style.display = 'none';
+                }
+            });
+
+            var elements = document.querySelectorAll('.uir-record-type, .uir-page-title');
+            elements.forEach(el => el.style.display = 'none');
+        });
+    </script>
+</html>

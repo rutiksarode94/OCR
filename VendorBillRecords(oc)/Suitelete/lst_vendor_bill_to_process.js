@@ -31,10 +31,11 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
         try {
             const request = context.request;
             const user = runtime.getCurrentUser();
+            const accountId = runtime.accountId;
             log.debug({ title: strDebugTitle, details: `User ID: ${user.id} | Role ID: ${user.role} | User Name: ${user.name}` });
 
             if (request.method === 'GET') {
-                displayVendorBillForm(context);
+                displayVendorBillForm(context, accountId);
             } else if (request.method === 'POST') {
                 handleRejectAction(context);
             }
@@ -48,7 +49,7 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * Displays the vendor bill records form with an HTML table.
      * @param {Object} context - Suitelet context object
      */
-    function displayVendorBillForm(context) {
+    function displayVendorBillForm(context, accountId) {
         const form = serverWidget.createForm({ title: 'LSTCapture Incoming Purchase Transactions To Be Processed' });
         const searchResults = getVendorBillRecords();
         const duplicateBillNumbers = getDuplicateBillNumbers(searchResults);
@@ -61,7 +62,7 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
         }
 
         const data = {
-            searchResults: formatSearchResults(searchResults, duplicateBillNumbers)
+            searchResults: formatSearchResults(searchResults, duplicateBillNumbers, accountId)
         };
 
         const renderer = render.create();
@@ -230,8 +231,7 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * @param {Object} duplicateBillNumbers - Map of duplicate bill numbers
      * @returns {Array} Formatted data for rendering
      */
-    function formatSearchResults(searchResults, duplicateBillNumbers) {
-        const accountId = runtime.accountId;
+    function formatSearchResults(searchResults, duplicateBillNumbers, accountId) {
         return searchResults.map(result => {
             try {
                 const internalId = result.getValue({ name: constants.STANDARD_FIELDS.FILE.INTERNAL_ID });
@@ -264,9 +264,9 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
                     : (!subsidiaryId || !vendorId || !totalAmount ? '<span>Please enter details to proceed</span>' : '');
 
                 // Generate URLs and buttons
-                const editUrl = generateEditUrl(internalId);
-                const proceedUrl = generateProceedUrl(vendorId, subsidiaryId, internalId, fileId, jsonFileId);
-                const rejectUrl = generateRejectUrl(internalId);
+                const editUrl = generateEditUrl(internalId, accountId);
+                const proceedUrl = generateProceedUrl(vendorId, subsidiaryId, internalId, fileId, jsonFileId, accountId);
+                const rejectUrl = generateRejectUrl(internalId, accountId);
                 const actionButton = newProcessStatusId === constants.PROCESS_STATUSES.PROCEED 
                     ? `<button type="button" class="action-button btn-proceed" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer;" onclick="redirectToSuitelet('${proceedUrl}')">Proceed</button>`
                     : `<button type="button" class="action-button btn-edit" style="background-color: yellow; color: black; border: none; padding: 5px 10px; cursor: pointer;" onclick="redirectToSuitelet('${editUrl}')">Edit</button>`;
@@ -318,9 +318,8 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * @param {String} internalId - Record internal ID
      * @returns {String} Edit URL
      */
-    function generateEditUrl(internalId) {
-        const accountId = runtime.accountId;
-        return `https://${accountId}.app.netsuite.com/app/site/hosting/scriptlet.nl?script=${constants.BILL_SPLIT_SCREEN_SUITELET.SCRIPT_ID}&deploy=${constants.BILL_SPLIT_SCREEN_SUITELET.DEPLOYMENT_ID}&internalId=${encodeURIComponent(internalId)}`;
+    function generateEditUrl(internalId, accountId) {
+        return `https://${accountId}.app.netsuite.com/app/site/hosting/scriptlet.nl?script=3739&deploy=1&internalId=${internalId}`;
     }
 
     /**
@@ -332,8 +331,8 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * @param {String} jsonFileId - JSON file ID
      * @returns {String} Proceed URL
      */
-    function generateProceedUrl(vendorId, subsidiaryId, internalId, fileId, jsonFileId) {
-        return `/app/accounting/transactions/vendbill.nl?whence=&vendor=${vendorId}&subsidiary=${subsidiaryId}&vendorToBill=${internalId}&fileId=${fileId}&jsonFileId=${jsonFileId}`;
+    function generateProceedUrl(vendorId, subsidiaryId, internalId, fileId, jsonFileId, accountId) {
+        return `https://${accountId}.app/accounting/transactions/vendbill.nl?whence=&vendor=${vendorId}&subsidiary=${subsidiaryId}&vendorToBill=${internalId}&fileId=${fileId}&jsonFileId=${jsonFileId}`;
     }
 
     /**
@@ -341,8 +340,7 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * @param {String} internalId - Record internal ID
      * @returns {String} Reject URL
      */
-    function generateRejectUrl(internalId) {
-        const accountId = runtime.accountId;
+    function generateRejectUrl(internalId, accountId) {
         return `https://${accountId}.app.netsuite.com/app/site/hosting/scriptlet.nl?script=${constants.VENDOR_BILL_PROCESS_SUITELET.SCRIPT_ID}&deploy=${constants.VENDOR_BILL_PROCESS_SUITELET.DEPLOYMENT_ID}&reject_id=${internalId}`;
     }
 

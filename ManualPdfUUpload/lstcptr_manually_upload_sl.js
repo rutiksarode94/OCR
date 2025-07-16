@@ -116,7 +116,6 @@ define(['N/ui/serverWidget', 'N/runtime', 'N/file', 'N/record', './lstcptr_manua
                         recordIds.push(recordId);
 
                         uploadedFile.folder = CONSTANTS.FOLDER_IDS.JSON_FILES;
-                        uploadedFile.name = `${recordId}_${uploadedFile.name}`;
                         let fileId = uploadedFile.save();
                         log.debug("File saved to file cabinet", `File ID: ${fileId}, Name: ${uploadedFile.name}`);
 

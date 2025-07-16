@@ -35,7 +35,6 @@ define([], () => {
         CLIENT_LICENSE_CS_DEBUG_TITLE: 'lstcptr_client_license_cs',
         LICENSE_SL_DEBUG_TITLE: 'lstcptr_liccense_sl',
         BILL_PROCESS_REST_API_DEBUG_TITLE: 'lstcapture_bill_process_rest_api',
-        SPLIT_SCREEN_SUITELET_DEBUG_TITLE: 'split_screen_su',
 
         // Suitelet Configuration
         AUTHORIZATION_SUITELET: {
@@ -58,9 +57,9 @@ define([], () => {
             SCRIPT_ID: 'customscript_lstcptr_liccense_sl',
             DEPLOYMENT_ID: 'customdeploy_lstcptr_liccense_sl'
         },
-        MANUALLY_UPLOAD_FILE_SUITELET: {
-            SCRIPT_ID: 'customscript_lstcptr_manually_uploadfile',
-            DEPLOYMENT_ID: 'customdeploy_lstcptr_manually_uploadfile'
+        MANUALLY_UPLOAD_FILE_SUITELET:{
+            SCRIPT_ID:'customscript_lstcptr_manually_uploadfile',
+            DEPLOYMENT_ID:'customdeploy_lstcptr_manually_uploadfile'
         },
 
         // Folder IDs
@@ -72,7 +71,7 @@ define([], () => {
         // Template File Names
         TEMPLATE_FILES: {
             VENDOR_BILL_PROCESS: 'vendor_bill_to_process_html.html',
-            SPLIT_SCREEN: 'lstcptr_splitScreenSuitelet.html',
+            SPLIT_SCREEN: 'splitScreenSuitelet.html',
             MANUALLY_UPLOAD_FILE: 'lstcptr_upload_file.html'
         },
 
@@ -198,9 +197,7 @@ define([], () => {
             GEN_TRAN_APP_STATUS: 'custrecord_lstcptr_gen_tran_app_status',
             SUBSIDIARY: 'custrecord_lstcptr_subsidiary',
             PROVIDER: 'custrecord_lstcptr_provider',
-            DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr',
-            MEMO: 'custrecord_lstcptr_memo',
-            EMAIL_BODY_HTML_TEXT: 'custrecord_lstcptr_email_body_html_text'
+            DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr'
         },
 
         // Main Configuration Fields
@@ -231,9 +228,7 @@ define([], () => {
             GEN_TRAN_APP_STATUS: 'custrecord_lstcptr_gen_tran_app_status',
             SUBSIDIARY: 'custrecord_lstcptr_subsidiary',
             PROVIDER: 'custrecord_lstcptr_provider',
-            DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr',
-            MEMO: 'custrecord_lstcptr_memo',
-            EMAIL_BODY_HTML_TEXT: 'custrecord_lstcptr_email_body_html_text'
+            DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr'
         },
 
         // Subsidiary Configuration Fields
@@ -281,14 +276,7 @@ define([], () => {
             LICENSE_PLAN: 'custpage_lstcptr_license_plan',
             AI_API_KEY: 'custpage_lstcptr_ai_api_key',
             AI_MODEL_ID: 'custpage_lstcptr_ai_model_id',
-            SEND_EMAIL_BUTTON: 'custpage_send_email',
-            RECORD_ID: 'recordId',
-            TRANSACTION_TYPE: 'transactionType',
-            SUBSIDIARY: 'subsidiary',
-            VENDOR: 'vendor',
-            AMOUNT: 'amount',
-            MEMO: 'memo',
-            DOCUMENT_ORIGIN: 'documentOrigin'
+            SEND_EMAIL_BUTTON: 'custpage_send_email'
         },
 
         // Process Status Values
@@ -321,8 +309,7 @@ define([], () => {
 
         // Custom Lists
         CUSTOM_LISTS: {
-            LICENSE_PLAN: 'customlist_lstcptr_license_plan',
-            TRANSACTION_TYPE: 'customlist_lst_transaction_type'
+            LICENSE_PLAN: 'customlist_lstcptr_license_plan'
         },
 
         // File Viewer Supported Types
@@ -365,11 +352,6 @@ define([], () => {
                 'application/zip'
             ],
             SUPPORTED_UPLOAD_EXTENSIONS: ['pdf', 'png', 'jpg', 'jpeg', 'tiff', 'docx']
-        },
-
-        // Document Origin Values
-        DOCUMENT_ORIGIN: {
-            NANONET: 'Nanonet'
         },
 
         // Nanonets Field Mappings

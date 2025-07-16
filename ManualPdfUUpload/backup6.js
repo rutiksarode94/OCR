@@ -667,7 +667,6 @@ define(['N/ui/serverWidget', 'N/search', 'N/runtime', 'N/url', 'N/https', 'N/fil
 
                         // Save the uploaded file to folder 8896 with recordId_filename naming
                         uploadedFile.folder = 8896;
-                        uploadedFile.name = `${recordId}_${uploadedFile.name}`;
                         let fileId = uploadedFile.save();
                         log.debug("File saved to file cabinet", `File ID: ${fileId}, Name: ${uploadedFile.name}`);
 
