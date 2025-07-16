@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Bill To Process</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://2913872.app.netsuite.com/core/media/media.nl?id=7727&c=2913872&h=DtsDsgbsPcpNYqop7DhWPNS9xpEt50EwyRGf0GSqABPQIa7O&_xt=.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+     <link href="https://2913872.app.netsuite.com/core/media/media.nl?id=7728&c=2913872&h=YnyxwgFHJiHRMNmt6GYtJS-fQn1N7HsXh7IRyzLAM7SzzPUV&_xt=.css" rel="stylesheet">
+    <link href="https://2913872.app.netsuite.com/core/media/media.nl?id=7729&c=2913872&h=wzEunSFp-nY6a_poyXH6bwMrdJbO2VX0zMWXTfjb1UJr_vO5&_xt=.css" rel="stylesheet">
+    <link href="https://2913872.app.netsuite.com/core/media/media.nl?id=7730&c=2913872&h=LtJ1ZIYPZkzk_okXsOAaNuKQif9enIt-aCtanRLSCsziS8Z_&_xt=.css" rel="stylesheet">
+   <style>
+        td, th { font-size: 14px; }
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 14px; font-weight: bold; display: flex; align-items: center; width: fit-content; }
+        .ready-for-processing { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
+        .matching-incomplete { background-color: #fff3e0; color: #f57c00; border: 1px solid #f57c00; }
+        .matching-successful { background-color: #e0f7fa; color: #00796b; border: 1px solid #00796b; }
+        .ready-for-processing .status-icon { color: #2e7d32; }
+        .matching-incomplete .status-icon { color: #f57c00; }
+        .duplicated-transaction { background-color: #fff3e0; color: #f57c00; border: 1px solid #f57c00; }
+        .icon { margin-right: 5px; }
+        .icon::before { content: "✔"; color: #2e7d32; }
+        .incomplete-icon::before { content: "!"; color: #f57c00; }
+        .btn { width:90px; }
+        .action-button {
+            appearance: button;
+            text-decoration: none;
+            border: 1px solid transparent;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.25rem;
+            cursor: pointer; 
+            display: inline-block;
+            text-align: center;
+            width: 90px;
+        }
+        .btn-process {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .btn-edit {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .internalId { display: none; }
+        .disabled {
+            opacity: 0.6;
+            cursor: not-allowed !important; 
+        }
+        .btn-reject {
+            background-color: #a2a7ac;
+            color:#fff;
+       }
+        .reject-disabled {
+            opacity: 0.6;
+            cursor: not-allowed !important; 
+        }
+        .license-warning {
+            background-color: #ff9800;
+            color: white;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <table id="vendorBillToProcessTable" class="table table-striped" style="width:100%">
+        <thead>
+            <tr>
+                <th class="internalId">ID</th> 
+                <th>INTERNAL ID</th>
+                <th>PROCESS</th>
+                <th>REJECT</th>
+                <th>CREATE DATE</th>
+                <th>TRANSACTION TYPE</th>
+                <th>STATUS</th>
+                <th>PDF</th>
+                <th>SUBSIDIARY</th>
+                <th>VENDOR</th>
+                <th>BILL NUMBER</th>
+                <th>BILL DATE</th>
+                <th>AMOUNT</th>
+                <!--<th>ITEM CONFIDENCE SCORE</th> -->
+                <th>SYSTEM ALERT</th>
+            </tr>
+        </thead>
+        <tbody>
+            <#list data.searchResults as result>
+            <tr>
+                <td class="internalId">${result.internalId}</td>
+                <td>${result.internalId}</td>
+
+                <td align="center">
+                    <div class="status-badge ${result.statusClass}">
+                        <span class="status-icon">${result.statusIcon}</span>
+                        ${result.processStatus}
+                    </div>
+                </td>
+
+                <td align="center">
+                    <div class="status-badge ${result.statusClass}">
+                        <span class="status-icon">${result.statusIcon}</span>
+                        ${result.processStatus}
+                    </div>
+                </td>
+
+                <!-- <td>
+                    <#if result.licenseStatus == "Active" >
+                    <button class="btn btn-secondary btn-sm reject-btn" data-id="${result.internalId}">REJECT</button>
+                    <#else>
+                    <button class="action-button btn-reject disabled">REJECT</button>
+                    </#if>
+                </td> -->
+                <td>${result.createdDate}</td>
+                <td>${result.transactionType}</td>
+                <td>${result.status}</td>
+                <td>
+                    <#if result.pdfUrl?has_content>
+                        <a href="${result.pdf}" target="_blank">
+                            <img src="https://cdn-icons-png.flaticon.com/128/337/337946.png" alt="PDF" width="20" height="20">
+                        </a>
+                    </#if>
+                </td>
+                
+                
+                <td>${result.subsidiary}</td>
+                <td>${result.vendor}</td>
+                <td>${result.billNumbers}</td>
+                <td>${result.billDate}</td>
+                <td>${result.totalAmount}</td>
+                <!-- <td>
+                    <#if result.actionButton?has_content>
+                        ${result.actionButton}
+                    </#if>
+                </td> -->
+                <td align="center">
+                    <#if result.systemAlert?? && result.systemAlert != "">
+                        <div class="status-badge incomplete-icon duplicated-transaction">${result.systemAlert}</div>
+                    </#if>
+                </td>
+            </tr>
+            </#list>
+        </tbody>
+    </table>
+    <script src="https://2913872.app.netsuite.com/core/media/media.nl?id=7731&c=2913872&h=YNV0y7rLZ2unRxIuUaINvZrXtPfNQbBtVhkwMqqrX51r22Vd&_xt=.js"></script>
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://2913872.app.netsuite.com/core/media/media.nl?id=7732&c=2913872&h=x_y6CkGIw4UddoQ_yxOTuJRU4g2bouQU7xEHRqb3YQrxX6qz&_xt=.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://2913872.app.netsuite.com/core/media/media.nl?id=7733&c=2913872&h=Rv7GLZwiaVyBpZFtjz7ePaeCcSSICQDpBPy7T4NXgKPkfTjH&_xt=.js"></script>
+    <script src="https://2913872.app.netsuite.com/core/media/media.nl?id=7734&c=2913872&h=xnDQSaA5Ss2dVNv-SP5EGKHLUnC36U0KB_drl6Qqe23Lsotu&_xt=.js"></script>
+    <script src="https://2913872.app.netsuite.com/core/media/media.nl?id=7735&c=2913872&h=bEvHwr-EIa3WVny2OkoDUSXP45RKfVc_swH23SvIEKqv1TQ_&_xt=.js"></script>
+    <script>
+        $(document).ready(function() {
+            $("#vendorBillToProcessTable").DataTable({
+                "dom": '<"top"lf>rt<"bottom">ip<"clear">',
+                "lengthMenu": [10, 25, 50, 100],
+                "language": { "lengthMenu": "Show _MENU_ entries" },
+                "order": [[0, "desc"]]
+            });
+
+            // Event listener for reject buttons
+            $(".reject-btn").on("click", function() {
+                var recordId = $(this).data("id");
+                console.log("Reject button clicked, recordId:", recordId); // Debugging log
+                $("#reject_id").val(recordId);
+                $("#rejectForm").submit();
+            });
+
+            // Function to bind action button events
+            function bindActionButtons() { 
+                // Remove any existing handlers to prevent duplicates
+                $('#vendorBillToProcessTable').off('click', '.action-button');
+                
+                // Add new handlers using event delegation
+                $('#vendorBillToProcessTable').on('click', '.action-button', function(e) {
+                    e.preventDefault();
+                    if (!$(this).hasClass('disabled')) {
+                        const url = $(this).data('url');
+                        if (url) {
+                            window.open(url, '_blank');
+                        }
+                    }
+                });
+            }
+
+            // Bind action buttons on document ready
+            bindActionButtons();
+        });
+    </script>
+    </body>
+</html>

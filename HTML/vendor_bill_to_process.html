@@ -1,0 +1,306 @@
+<!-- /*********************************************************************************************
+* Copyright © 2025, Oracle and/or its LST Counsaltacy Pvt. Ltd., All rights reserved.
+*
+* Name:            Vendor Bill To Process Records (lst_vendor_bill_to_process_html.html)
+*
+* Version:          1.0.0  -  12-March-2025 -  RS     Initial Development 
+*
+* Author:          LiveStrong Technologies
+*
+* Purpose:         This script is used to show vendor bill records in table format.
+*
+* Script:          16655
+* Deploy:          
+*
+*********************************************************************************************/ -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Bill To Process</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #f4f4f4;
+            border: none;
+        }
+
+        /* table {
+            width: 100%;
+            border: none;
+            background: white;
+            font-size: 14px;
+
+        } */
+
+        th,
+        td {
+            border: none;
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            border: 1px solid #686666;
+        }
+
+        th {
+            background-color: hsl(220, 43%, 97%);
+            color: rgb(19, 14, 14);
+            cursor: pointer;
+        }
+
+        th:hover {
+            background-color: #d6d8db;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .duplicated-transaction {
+            background-color: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #f57c00;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .btn {
+            padding: 5px 8px;
+            bottom: 10px;
+            font-size: 12px;
+            border: none;
+            width: 100px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        /* table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin: 0 auto;
+        } */
+
+        .btn-primary {
+            background-color: #407ab8;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #a2a7ac;
+            color: white;
+        }
+
+        .pdf-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .btn-edit {
+            background-color: rgb(233, 98, 40);
+            color: rgb(250, 245, 245);
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            width: 100px;
+        }
+
+        .spacer-div {
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <table id="vendorBillToProcessTable">
+        <thead>
+            <tr>
+                <th style="width:4%">ID</th>
+                <th style="width:8%">PROCESS</th>
+                <th style="width:8%">REJECT</th>
+                <th style="width:12%">CREATE DATE</th>
+                <th style="width:6%">TRANSACTION TYPE</th>
+                <th style="width:7%">STATUS</th>
+                <!-- <th style="width:4%">PDF</th> -->
+                <th style="width:9%">SUBSIDIARY</th>
+                <th style="width:10%">VENDOR</th>
+                <th style="width:8%">BILL NUMBER</th>
+                <th style="width:12%">BILL DATE</th>
+                <th style="width:4%">AMOUNT</th>
+                <th style="width:12%">SYSTEM ALERT</th>
+            </tr>
+        </thead>
+        <tbody>
+            <#list data.searchResults as result>
+                <tr style="border: 1px solid #686666;">
+                    <td>
+                        <a href="javascript:void(0);" onclick="redirectToSuitelet('${result.internalId?html}')">
+                            ${result.internalId}
+                        </a>
+                    </td>
+
+                    <td>
+                        <#if result.processStatus=="Proceed">
+                            <!-- Show Proceed button if status is "Proceed" -->
+                            <button type="button" class="btn btn-primary proceed-btn"
+                                onclick="redirectToSuitelet('${result.proceedUrl}')">
+                                PROCEED
+                            </button>
+                            <#else>
+                                <!-- Show Edit button if status is not "Proceed" -->
+                                <button type="button" class="action-button btn-edit"
+                                    onclick="redirectToSuitelet('${result.editUrl}')">
+                                    Edit
+                                </button>
+                        </#if>
+                    </td>
+
+                    <td>
+                        <form class="reject-form" method="POST" action="${result.rejectUrl}">
+                            <input type="hidden" name="reject_id" class="reject_id">
+                            <button type="button" data-id='${result.internalId}' class="btn btn-danger reject-btn">
+                                REJECT
+                            </button>
+                        </form>
+                    </td>
+
+                    <td>${result.createdDate}</td>
+                    <td>${result.transactionType}</td>
+                    <td>
+                        <div class="status-badge ${result.statusClass}">${result.processStatus}</div>
+                    </td>
+                    <!-- <td  >
+                        <#if result.pdfFileId?has_content>
+                            <a href="${result.pdfFileId}" target="_blank"
+                                onclick="return checkPdfUrl('${result.pdfFileId}')">
+                                <img src="https://cdn-icons-png.flaticon.com/128/337/337946.png" class="pdf-icon"
+                                    alt="PDF">
+                            </a>
+                            <#else>
+                                <a href="#" onclick="return checkPdfUrl('')">No file</a>
+                        </#if>
+                    </td> -->
+                    <td>${result.subsidiary}</td>
+                    <td>${result.vendor}</td>
+                    <td>${result.billNumbers}</td>
+                    <td>${result.billDate}</td>
+                    <td>${result.totalAmount}</td>
+                    <td align="center">
+                        <#if result.systemAlert?? && result.systemAlert !="">
+                            <div class="status-badge duplicated-transaction">${result.systemAlert}</div>
+                        </#if>
+                    </td>
+                </tr>
+            </#list>
+        </tbody>
+
+    </table>
+    <script>
+
+        function redirectToSuitelet(editUrl) {
+            if (editUrl) {
+                window.open(editUrl, '_blank'); // Opens in a new tab
+            } else {
+                alert("Invalid Edit URL");
+            }
+        }
+        function redirectToSuitelet(proceedUrl) {
+            if (proceedUrl) {
+                window.open(proceedUrl, '_blank'); // Opens in a new tab
+            } else {
+                alert("Invalid Edit URL");
+            }
+        }
+
+
+        $(document).ready(function () {
+            var table = $("#vendorBillToProcessTable").DataTable({
+                "dom": '<"top"lf><"status-filter spacer-div">rt<"bottom"ip>',
+                "lengthMenu": [10, 25, 50, 100],
+                "language": { "lengthMenu": "Show _MENU_ entries" },
+                "order": [[0, "desc"]] // Sort by first column (change index if needed)
+            });
+
+            // Append Status Filter Dropdown
+            $("div.status-filter").html(`
+        <label style="margin-top: 3px; margin-bottom: 15px; display: block; margin-left: 20px;">
+            Status:
+            <select id="statusFilter" class="form-control" style="width: 200px; display: inline-block;">
+                <option value="">All</option>
+                <option value="Proceed">Proceed</option>
+                <option value="Incomplete Matching">Incomplete Matching</option>
+                <option value="Reject">Reject</option>
+            </select>
+        </label>
+    `);
+
+            $(".status-filter").css({
+                "display": "flex",
+                "justify-content": "flex-start",
+                "align-items": "center",
+                "gap": "15px" // Keeps spacing between DataTable controls
+            });
+
+            $(".statusFilter").css({
+                "display": "inline-block",
+                "margin-right": "1px" // Ensures only 1px gap between status filter and length menu
+            });
+
+            // Status Filter Functionality
+            $("#statusFilter").on("change", function () {
+                var selectedStatus = $(this).val().trim(); // Get selected value and remove extra spaces
+
+                if (selectedStatus === "") {
+                    table.search("").columns().search("").draw(); // Show all records when "All" is selected
+                } else {
+                    table.columns(5).search("^" + selectedStatus + "$", true, false).draw(); // Exact match filtering
+                }
+            });
+        });
+
+        document.querySelectorAll(".reject-btn").forEach(function (button) {
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+
+                var internalId = button.getAttribute("data-id"); // Get record ID from button
+                if (!internalId) {
+                    alert("Invalid Record ID!");
+                    return;
+                }
+
+                var form = button.closest("form"); // Find the closest form
+                form.querySelector(".reject_id").value = internalId; // Set hidden input value
+
+                if (confirm("Are you sure you want to reject this record whicch will be inactive the record ?")) {
+                    form.submit(); // Submit the form via POST
+                }
+            });
+        });
+
+    </script>
+</body>
+
+</html>

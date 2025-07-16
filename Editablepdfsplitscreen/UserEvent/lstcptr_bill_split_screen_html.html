@@ -1,0 +1,589 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.7.2/font/bootstrap-icons.min.css" integrity="sha512-1fPmaHba3v4A7PaUsComSM4TBsrrRGs+/fv0vrzafQ+Rw+siILTiJa0NtFfvGeyY5E182SDTaF5PqP+XOHgJag==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+        #inlineContent {
+            position: fixed;
+            top: 96px;
+            left: 0;
+            width: 45%;
+            height: calc(100vh - 96px);
+            background-color: #f0f0f0;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        #div__body {
+            position: absolute;
+            top: 96px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 96px);
+            background-color: #ffffff;
+            overflow: auto;
+        }
+        #leftSideContent {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        #container {
+            position: relative;
+            display: inline-block;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        #output {
+            padding: 10px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            background-color: #f4f4f4;
+        }
+        #selectionBox {
+            position: absolute;
+            border: 2px solid #00BFFF;
+            display: none;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .highlight-box {
+            position: absolute;
+            border: 2px solid yellow;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .hover-box {
+            position: absolute;
+            border: 2px solid red;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .hiddenFields {
+            display: none;
+        }
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #333;
+            padding: 10px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .pagination-controls, .zoom-controls, .action-controls {
+            display: flex;
+            align-items: center;
+        }
+        .pagination-button, .zoom-button, .download-btn {
+            color: white;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+        .large-icon {
+            font-size: 18px;
+        }
+        .zoom-container {
+            transform-origin: 50% 0;
+            transition: transform 0.3s ease;
+        }
+        #pdfWrapper {
+            position: relative;
+            width: 100%;
+            height: calc(100% - 50px);
+            overflow: auto;
+        }
+        #pdfCanvas {
+            display: block;
+            max-width: none;
+            max-height: none;
+        }
+        #spinner {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #pdfContent, #fileContent, #imageViewer, #unsupportedMessage {
+            display: none;
+        }
+        #fileContent {
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f4f4f4;
+            white-space: pre-wrap;
+            overflow: auto;
+            max-height: 80vh;
+        }
+        .error-message, .unsupported-message {
+            padding: 10px;
+            text-align: center;
+            color: #333;
+        }
+        .error-message {
+            color: #d32f2f;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.15.349/build/pdf.min.js"></script>
+</head>
+<body>
+    <div id="inlineContent">
+        <div id="leftSideContent">
+            <div id="errorMessage" class="error-message"></div>
+            <div id="spinner">
+                <div class="spinner"></div>
+                <p>Loading File...</p>
+            </div>
+            <div id="pdfContent">
+                <div id="nav">
+                    <div class="pagination-container">
+                        <div class="pagination-controls">
+                            <a class="pagination-button" id="first-page" title="First Page"><i class="bi bi-chevron-bar-left large-icon"></i></a>
+                            <a class="pagination-button" id="prev_page" title="Previous Page"><i class="bi bi-chevron-left large-icon"></i></a>
+                            <span id="page_num"></span> / <span id="page_count"></span>
+                            <a class="pagination-button" id="next_page" title="Next Page"><i class="bi bi-chevron-right large-icon"></i></a>
+                            <a class="pagination-button" id="last-page" title="Last Page"><i class="bi bi-chevron-bar-right large-icon"></i></a>
+                        </div>
+                        <div class="zoom-controls">
+                            <span class="zoom-button" id="zoom_in" title="Zoom In"><i class="bi bi-zoom-in large-icon"></i></span>
+                            <span class="zoom-button" id="zoom_out" title="Zoom Out"><i class="bi bi-zoom-out large-icon"></i></span>
+                            <span class="zoom-button" id="reset_zoom" title="Reset Zoom"><i class="bi bi-arrow-counterclockwise large-icon"></i></span>
+                        </div>
+                        <div class="action-controls">
+                            <a href="{{fileUrl}}" download="document" class="download-btn" title="Download"><i class="bi bi-download large-icon"></i></a>
+                            <a id="printButton" title="Print" style="color: white; font-size: 14px; cursor: pointer;"><i class="bi bi-printer large-icon"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center">
+                    <div class="zoom-container" id="zoomable_content">
+                        <div id="pdfWrapper">
+                            <div id="container">
+                                <canvas id="pdfCanvas"></canvas>
+                                <div id="selectionBox"></div>
+                                <div id="hoverBox" class="hover-box"></div>
+                                <iframe id="printIframe" style="display: none;"></iframe>
+                            </div>
+                        </div>
+                        <img id="imageViewer" style="max-width: 100%; height: auto;" />
+                        <div id="fileContent"></div>
+                        <div id="unsupportedMessage" class="unsupported-message">
+                            <p>This file type cannot be previewed in the browser.</p>
+                            <a href="{{fileUrl}}" download="document">Download File</a>
+                        </div>
+                    </div>
+                </div>
+                <input type="text" id="searchInput" class="hiddenFields" placeholder="Enter text to search..." />
+                <h3 class="hiddenFields">Extracted Text from Selected Area:</h3>
+                <div id="output" class="hiddenFields">No text extracted yet.</div>
+                <input type="hidden" id="custpage_hidden_text" class="hiddenFields" name="custpage_hidden_text" value="" />
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            // Initialize layout
+            document.addEventListener('DOMContentLoaded', function () {
+                const showFileByDefault = document.getElementById('custpage_lstcptr_show_file').value === 'T';
+                const inlineContent = document.getElementById('inlineContent');
+                const bodyElement = document.getElementById('div__body');
+                if (!inlineContent || !bodyElement) {
+                    console.error('Layout elements missing');
+                    showErrorMessage('Layout initialization failed. Please contact administrator.');
+                    return;
+                }
+                inlineContent.style.display = showFileByDefault ? 'block' : 'none';
+                bodyElement.style.left = showFileByDefault ? '45%' : '0';
+                bodyElement.style.width = showFileByDefault ? '55%' : '100%';
+                initializeViewer();
+            });
+
+            // Error handling
+            function showErrorMessage(message) {
+                console.error(message);
+                const errorMessage = document.getElementById('errorMessage');
+                const pdfContent = document.getElementById('pdfContent');
+                const spinner = document.getElementById('spinner');
+                if (errorMessage && pdfContent && spinner) {
+                    spinner.style.display = 'none';
+                    pdfContent.style.display = 'block';
+                    errorMessage.textContent = message;
+                    errorMessage.style.display = 'block';
+                }
+            }
+
+            // Toggle visibility
+            window.togglePdfVisibility = function () {
+                const inlineContent = document.getElementById('inlineContent');
+                const bodyElement = document.getElementById('div__body');
+                if (!inlineContent || !bodyElement) {
+                    console.error('Cannot toggle visibility. Layout elements missing.');
+                    return;
+                }
+                const isHidden = window.getComputedStyle(inlineContent).display === 'none';
+                inlineContent.style.display = isHidden ? 'block' : 'none';
+                bodyElement.style.left = isHidden ? '45%' : '0';
+                bodyElement.style.width = isHidden ? '55%' : '100%';
+                document.getElementById('custpage_lstcptr_show_file').value = isHidden ? 'T' : 'F';
+            };
+
+            // File viewer logic
+            const fileUrl = document.getElementById('custpage_lstcptr_file_url').value;
+            const fileType = document.getElementById('custpage_file_type').value;
+            const fileExtension = document.getElementById('custpage_file_extension').value;
+            const supportedTypes = JSON.parse(document.getElementById('custpage_supported_types').value || '[]');
+            const pdfCanvas = document.getElementById('pdfCanvas');
+            const ctx = pdfCanvas.getContext('2d');
+            const outputDiv = document.getElementById('output');
+            const hiddenTextField = document.getElementById('custpage_hidden_text');
+            const searchInput = document.getElementById('searchInput');
+            const hoverBox = document.getElementById('hoverBox');
+            const zoomableContent = document.getElementById('zoomable_content');
+            const pdfContent = document.getElementById('pdfContent');
+            const pdfWrapper = document.getElementById('pdfWrapper');
+            const imageViewer = document.getElementById('imageViewer');
+            const fileContent = document.getElementById('fileContent');
+            const errorMessage = document.getElementById('errorMessage');
+            const unsupportedMessage = document.getElementById('unsupportedMessage');
+            const spinner = document.getElementById('spinner');
+
+            let pdfTextContent = [];
+            let pdfPageViewport;
+            let lastHoveredItem = null;
+            const initialState = {
+                pdfDoc: null,
+                currentPage: 1,
+                pageCount: 0,
+                zoom: calculateZoom(),
+                minZoom: 0.5,
+                maxZoom: 3
+            };
+
+            function calculateZoom() {
+                const width = window.innerWidth;
+                const desiredWidth = 2050;
+                let zoom = width < 600 ? 0.7 : width < 1200 ? 1 : 1.5;
+                return zoom * (width / desiredWidth);
+            }
+
+            function initializeViewer() {
+                if (!fileUrl) {
+                    showErrorMessage('No file URL provided.');
+                    return;
+                }
+
+                if (fileType === 'application/pdf') {
+                    loadPdf();
+                } else if (['image/jpeg', 'image/png', 'image/gif', 'image/bmp'].includes(fileType)) {
+                    loadImage();
+                } else if (['text/plain', 'text/csv', 'application/json'].includes(fileType)) {
+                    loadTextFile();
+                } else if (!supportedTypes.includes(fileType)) {
+                    showUnsupportedMessage();
+                } else {
+                    showErrorMessage('Unsupported file type: ' + fileType);
+                }
+            }
+
+            function loadPdf() {
+                pdfjsLib.getDocument(fileUrl).promise.then(pdfDoc => {
+                    initialState.pdfDoc = pdfDoc;
+                    initialState.pageCount = pdfDoc.numPages;
+                    document.getElementById('page_count').textContent = initialState.pageCount;
+                    renderPage();
+                    setupPdfInteractions();
+                }).catch(err => {
+                    showErrorMessage('Failed to load PDF: ' + err.message);
+                });
+            }
+
+            function loadImage() {
+                spinner.style.display = 'none';
+                pdfContent.style.display = 'none';
+                imageViewer.src = fileUrl;
+                imageViewer.style.display = 'block';
+            }
+
+            function loadTextFile() {
+                fetch(fileUrl).then(response => response.text()).then(text => {
+                    spinner.style.display = 'none';
+                    pdfContent.style.display = 'none';
+                    fileContent.textContent = text;
+                    fileContent.style.display = 'block';
+                }).catch(err => {
+                    showErrorMessage('Failed to load text file: ' + err.message);
+                });
+            }
+
+            function showUnsupportedMessage() {
+                spinner.style.display = 'none';
+                pdfContent.style.display = 'none';
+                unsupportedMessage.style.display = 'block';
+            }
+
+            function renderPage() {
+                if (!initialState.pdfDoc) return;
+                initialState.pdfDoc.getPage(initialState.currentPage).then(page => {
+                    clearHighlights();
+                    pdfPageViewport = page.getViewport({ scale: initialState.zoom });
+                    pdfCanvas.width = pdfPageViewport.width;
+                    pdfCanvas.height = pdfPageViewport.height;
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: pdfPageViewport
+                    };
+                    page.render(renderContext).promise.then(() => {
+                        document.getElementById('page_num').textContent = initialState.currentPage;
+                        page.getTextContent().then(textContent => {
+                            pdfTextContent = textContent.items;
+                            spinner.style.display = 'none';
+                            pdfContent.style.display = 'block';
+                            updatePaginationButtons();
+                        });
+                    });
+                }).catch(err => {
+                    showErrorMessage('Failed to render page: ' + err.message);
+                });
+            }
+
+            function updatePaginationButtons() {
+                document.getElementById('first-page').style.opacity = initialState.currentPage === 1 ? '0.5' : '1';
+                document.getElementById('prev_page').style.opacity = initialState.currentPage === 1 ? '0.5' : '1';
+                document.getElementById('next_page').style.opacity = initialState.currentPage === initialState.pageCount ? '0.5' : '1';
+                document.getElementById('last-page').style.opacity = initialState.currentPage === initialState.pageCount ? '0.5' : '1';
+            }
+
+            function clearHighlights() {
+                document.querySelectorAll('.highlight-box').forEach(box => box.remove());
+                hoverBox.style.display = 'none';
+                if (outputDiv) outputDiv.textContent = 'No text extracted yet.';
+                if (hiddenTextField) hiddenTextField.value = '';
+            }
+
+            function setupPdfInteractions() {
+                let isMouseDown = false;
+                let startX, startY;
+
+                pdfCanvas.addEventListener('click', function () {
+                    clearHighlights();
+                    if (lastHoveredItem) {
+                        const capturedText = lastHoveredItem.str;
+                        outputDiv.textContent = capturedText;
+                        hiddenTextField.value = capturedText;
+                        window.applySelectedPdfTextToField?.(capturedText);
+                    }
+                });
+
+                pdfCanvas.addEventListener('mousedown', function (e) {
+                    const rect = pdfCanvas.getBoundingClientRect();
+                    startX = e.clientX - rect.left;
+                    startY = e.clientY - rect.top;
+                    isMouseDown = true;
+                    selectionBox.style.left = `${startX}px`;
+                    selectionBox.style.top = `${startY}px`;
+                    selectionBox.style.width = `0px`;
+                    selectionBox.style.height = `0px`;
+                    selectionBox.style.display = 'block';
+                });
+
+                pdfCanvas.addEventListener('mousemove', function (e) {
+                    if (!isMouseDown) {
+                        checkHover(e);
+                        return;
+                    }
+                    const rect = pdfCanvas.getBoundingClientRect();
+                    const endX = e.clientX - rect.left;
+                    const endY = e.clientY - rect.top;
+                    const width = Math.abs(endX - startX);
+                    const height = Math.abs(endY - startY);
+                    selectionBox.style.width = `${width}px`;
+                    selectionBox.style.height = `${height}px`;
+                    if (endX < startX) selectionBox.style.left = `${endX}px`;
+                    if (endY < startY) selectionBox.style.top = `${endY}px`;
+                });
+
+                pdfCanvas.addEventListener('mouseup', async function (e) {
+                    isMouseDown = false;
+                    selectionBox.style.display = 'none';
+                    const dragDistanceX = Math.abs(e.clientX - (startX + pdfCanvas.getBoundingClientRect().left));
+                    const dragDistanceY = Math.abs(e.clientY - (startY + pdfCanvas.getBoundingClientRect().top));
+                    if (dragDistanceX > 5 || dragDistanceY > 5) {
+                        const selectedText = await captureSelectedText(startX, startY, e.clientX - pdfCanvas.getBoundingClientRect().left, e.clientY - pdfCanvas.getBoundingClientRect().top);
+                        if (selectedText.length > 0) {
+                            const text = selectedText.join('\n');
+                            outputDiv.textContent = text;
+                            hiddenTextField.value = text;
+                            window.applySelectedPdfTextToField?.(text);
+                        }
+                    }
+                });
+
+                async function captureSelectedText(x1, y1, x2, y2) {
+                    const selectedText = [];
+                    const minX = Math.min(x1, x2);
+                    const maxX = Math.max(x1, x2);
+                    const minY = Math.min(y1, y2);
+                    const maxY = Math.max(y1, y2);
+                    const lines = {};
+                    for (let item of pdfTextContent) {
+                        const left = item.transform[4] * pdfPageViewport.scale;
+                        const top = pdfPageViewport.height - (item.transform[5] * pdfPageViewport.scale);
+                        const width = item.width * pdfPageViewport.scale;
+                        const height = item.height * pdfPageViewport.scale;
+                        if (left + width >= minX && left <= maxX && top >= minY && top - height <= maxY) {
+                            const lineY = Math.floor(top);
+                            if (!lines[lineY]) lines[lineY] = [];
+                            let charLeft = left;
+                            const charWidth = width / item.str.length;
+                            for (let i = 0; i < item.str.length; i++) {
+                                const char = item.str[i];
+                                if (charLeft + charWidth >= minX && charLeft <= maxX) {
+                                    lines[lineY].push({ text: char, x: charLeft });
+                                }
+                                charLeft += charWidth;
+                            }
+                        }
+                    }
+                    const sortedLines = Object.keys(lines).sort((a, b) => a - b);
+                    for (let line of sortedLines) {
+                        lines[line].sort((a, b) => a.x - b.x);
+                        selectedText.push(lines[line].map(item => item.text).join(''));
+                    }
+                    return selectedText;
+                }
+
+                function checkHover(e) {
+                    const rect = pdfCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    lastHoveredItem = null;
+                    for (let item of pdfTextContent) {
+                        const left = item.transform[4] * pdfPageViewport.scale;
+                        const top = pdfPageViewport.height - (item.transform[5] * pdfPageViewport.scale);
+                        const width = item.width * pdfPageViewport.scale;
+                        const height = item.height * pdfPageViewport.scale;
+                        if (x >= left && x <= left + width && y >= top - height && y <= top) {
+                            lastHoveredItem = item;
+                            hoverBox.style.left = `${left}px`;
+                            hoverBox.style.top = `${top - height}px`;
+                            hoverBox.style.width = `${width}px`;
+                            hoverBox.style.height = `${height}px`;
+                            hoverBox.style.display = 'block';
+                            break;
+                        }
+                    }
+                    if (!lastHoveredItem) hoverBox.style.display = 'none';
+                }
+
+                document.getElementById('first-page').addEventListener('click', () => {
+                    if (initialState.currentPage !== 1) {
+                        initialState.currentPage = 1;
+                        renderPage();
+                    }
+                });
+
+                document.getElementById('prev_page').addEventListener('click', () => {
+                    if (initialState.currentPage > 1) {
+                        initialState.currentPage--;
+                        renderPage();
+                    }
+                });
+
+                document.getElementById('next_page').addEventListener('click', () => {
+                    if (initialState.currentPage < initialState.pageCount) {
+                        initialState.currentPage++;
+                        renderPage();
+                    }
+                });
+
+                document.getElementById('last-page').addEventListener('click', () => {
+                    if (initialState.currentPage !== initialState.pageCount) {
+                        initialState.currentPage = initialState.pageCount;
+                        renderPage();
+                    }
+                });
+
+                document.getElementById('zoom_in').addEventListener('click', () => {
+                    if (initialState.zoom < initialState.maxZoom) {
+                        initialState.zoom += 0.1;
+                        zoomableContent.style.transform = `scale(${initialState.zoom})`;
+                        renderPage();
+                    }
+                });
+
+                document.getElementById('zoom_out').addEventListener('click', () => {
+                    if (initialState.zoom > initialState.minZoom) {
+                        initialState.zoom -= 0.1;
+                        zoomableContent.style.transform = `scale(${initialState.zoom})`;
+                        renderPage();
+                    }
+                });
+
+                document.getElementById('reset_zoom').addEventListener('click', () => {
+                    initialState.zoom = calculateZoom();
+                    zoomableContent.style.transform = `scale(${initialState.zoom})`;
+                    renderPage();
+                });
+
+                document.getElementById('printButton').addEventListener('click', () => {
+                    const printIframe = document.getElementById('printIframe');
+                    printIframe.src = fileUrl;
+                    printIframe.onload = () => printIframe.contentWindow.print();
+                });
+
+                searchInput.addEventListener('input', () => {
+                    clearHighlights();
+                    const searchText = searchInput.value.toLowerCase();
+                    if (!searchText) return;
+                    pdfTextContent.forEach(item => {
+                        if (item.str.toLowerCase().includes(searchText)) {
+                            const left = item.transform[4] * pdfPageViewport.scale;
+                            const top = pdfPageViewport.height - (item.transform[5] * pdfPageViewport.scale);
+                            const width = item.width * pdfPageViewport.scale;
+                            const height = item.height * pdfPageViewport.scale;
+                            const highlight = document.createElement('div');
+                            highlight.className = 'highlight-box';
+                            highlight.style.left = `${left}px`;
+                            highlight.style.top = `${top - height}px`;
+                            highlight.style.width = `${width}px`;
+                            highlight.style.height = `${height}px`;
+                            pdfCanvas.parentNode.appendChild(highlight);
+                        }
+                    });
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Bill To Process</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            width: 100%;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin: 0 0 10px;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .entries-select {
+            padding: 5px;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        th:hover {
+            background-color: #0056b3;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .system-alert {
+            font-weight: bold;
+            color: red;
+        }
+
+        .pagination {
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        .pagination button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 12px;
+            margin: 0 2px;
+        }
+
+        .pagination button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+        <div>
+            Show 
+            <select id="entriesSelect" class="entries-select">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select> 
+            entries
+    </div>
+
+    <table id="vendorBillToProcessTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">INTERNAL ID</th>
+                <th>PROCESS</th>
+                <th>REJECT</th>
+                <th onclick="sortTable(3)">CREATE DATE</th>
+                <th onclick="sortTable(4)">TRANSACTION TYPE</th>
+                <th onclick="sortTable(5)">STATUS</th>
+                <th>PDF</th>
+                <th onclick="sortTable(7)">SUBSIDIARY</th>
+                <th onclick="sortTable(8)">VENDOR</th>
+                <th onclick="sortTable(9)">BILL NUMBER</th>
+                <th onclick="sortTable(10)">BILL DATE</th>
+                <th onclick="sortTable(11)">AMOUNT</th>
+                <th onclick="sortTable(12)">SYSTEM ALERT</th>
+            </tr>
+        </thead>
+        <tbody>
+            <#list data.searchResults as result>
+            <tr>
+                <td>${result.internalId}</td>
+                <td><button class="process-btn" data-id="${result.internalId}">PROCEED</button></td>
+                <td><button class="reject-btn" data-id="${result.internalId}">REJECT</button></td>
+                <td>${result.createdDate}</td>
+                <td>${result.transactionType}</td>
+                <td>${result.status}</td>
+               <td>
+    <#if result.pdfFileId?has_content>
+        <a href="${result.pdfFileId}" class="pdf-link" target="_blank">
+            <img src="https://cdn-icons-png.flaticon.com/128/337/337946.png" alt="PDF" width="20">
+        </a>
+    <#else>
+        <span>No file</span>
+    </#if>
+</td>
+
+                <td>${result.subsidiary}</td>
+                <td>${result.vendor}</td>
+                <td>${result.billNumbers}</td>
+                <td>${result.billDate}</td>
+                <td>${result.totalAmount}</td>
+                <td class="system-alert">${result.systemAlert}</td>
+            </tr>
+            </#list>
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        <button id="prevPage" disabled>Previous</button>
+        <span id="currentPage">Page 1</span>
+        <button id="nextPage">Next</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const table = document.getElementById("vendorBillToProcessTable").getElementsByTagName("tbody")[0];
+        const rows = table.getElementsByTagName("tr");
+        let currentPage = 1;
+        let rowsPerPage = parseInt(document.getElementById("entriesSelect").value);
+        const totalPages = () => Math.ceil(rows.length / rowsPerPage);
+
+        function showPage(page) {
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = (i >= (page - 1) * rowsPerPage && i < page * rowsPerPage) ? "" : "none";
+            }
+            document.getElementById("currentPage").textContent = "Page " + page;
+            document.getElementById("prevPage").disabled = (page === 1);
+            document.getElementById("nextPage").disabled = (page === totalPages());
+        }
+
+        document.getElementById("prevPage").addEventListener("click", function() {
+            if (currentPage > 1) {
+                currentPage--;
+                showPage(currentPage);
+            }
+        });
+
+        document.getElementById("nextPage").addEventListener("click", function() {
+            if (currentPage < totalPages()) {
+                currentPage++;
+                showPage(currentPage);
+            }
+        });
+
+        document.getElementById("entriesSelect").addEventListener("change", function() {
+            rowsPerPage = parseInt(this.value);
+            currentPage = 1;
+            showPage(currentPage);
+        });
+
+        showPage(currentPage);
+    });
+
+    function sortTable(columnIndex) {
+        let table = document.getElementById("vendorBillToProcessTable");
+        let rows = Array.from(table.rows).slice(1);
+        let isAscending = table.dataset.sortOrder === "asc";
+        
+        rows.sort((rowA, rowB) => {
+            let cellA = rowA.cells[columnIndex].innerText.trim();
+            let cellB = rowB.cells[columnIndex].innerText.trim();
+            let isNumeric = !isNaN(cellA) && !isNaN(cellB);
+            return isNumeric
+                ? (isAscending ? cellA - cellB : cellB - cellA)
+                : (isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA));
+        });
+
+        table.dataset.sortOrder = isAscending ? "desc" : "asc";
+        rows.forEach(row => table.appendChild(row));
+    }
+function checkPdfUrl(pdfUrl) {
+    if (!pdfUrl || pdfUrl.trim() === '') {
+        alert('No file available.');
+        return false; // Prevent navigation
+    }
+    return true; // Allow navigation if a valid file exists
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".pdf-link").forEach(link => {
+        link.addEventListener("click", function (event) {
+            const pdfUrl = this.getAttribute("href");
+            if (!checkPdfUrl(pdfUrl)) {
+                event.preventDefault(); // Stop the navigation if no file is available
+            }
+        });
+    });
+});
+
+</script>
+
+</body>
+</html>
