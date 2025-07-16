@@ -21,7 +21,7 @@
 /**
  * @NApiVersion 2.1
  * @NScriptType Suitelet
- * @NModuleScope private
+ * @NModuleScope Public
  */
 define(['N/crypto', 'N/search', 'N/format', 'N/record', 'N/config', 'N/encode', 'N/runtime'],
     function (crypto, search, format, record, config, encode, runtime) {
