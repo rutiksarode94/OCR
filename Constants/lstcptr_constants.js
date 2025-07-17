@@ -31,11 +31,12 @@ define([], () => {
         MAIN_CONFIG_UE_DEBUG_TITLE: 'lstcptr_main_configuration',
         SUBSIDIARY_CONFIG_UE_DEBUG_TITLE: 'lstcptr_subsidiary_configuration_ue',
         SUBSIDIARY_CONFIG_CS_DEBUG_TITLE: 'lstcptr_subsidiary_con_cs',
-        STAGING_RECORD_SPLIT_ON_VIEW: 'lstcptr_called_suitelet_on_view',
+        STAGING_RECORD_SPLIT_ON_VIEW: 'lstcptr_called_suitelet_on_view_ue',
         CLIENT_LICENSE_CS_DEBUG_TITLE: 'lstcptr_client_license_cs',
         LICENSE_SL_DEBUG_TITLE: 'lstcptr_liccense_sl',
-        BILL_PROCESS_REST_API_DEBUG_TITLE: 'lstcapture_bill_process_rest_api',
+        BILL_PROCESS_REST_API_DEBUG_TITLE: 'lstcapture_bill_process_rest_api_rl',
         SPLIT_SCREEN_SUITELET_DEBUG_TITLE: 'split_screen_su',
+        SUPPORT_EMAIL:'rutik.sarode@livestrongtechnologies.com',
 
         // Suitelet Configuration
         AUTHORIZATION_SUITELET: {
@@ -79,7 +80,7 @@ define([], () => {
         // Script File Names
         SCRIPT_FILES: {
             SUBSIDIARY_CONFIG_CS: 'lstcptr_subsidiary_con_cs.js',
-            SEND_EMAIL_CS: './lstcptr_send_email.js'
+            SEND_EMAIL_CS: './lstcptr_send_email_cs.js'
         },
 
         // Standard NetSuite Fields
@@ -322,7 +323,7 @@ define([], () => {
         // Custom Lists
         CUSTOM_LISTS: {
             LICENSE_PLAN: 'customlist_lstcptr_license_plan',
-            TRANSACTION_TYPE: 'customlist_lst_transaction_type'
+            TRANSACTION_TYPE: 'customlist_lstcptr_tran_type'
         },
 
         // File Viewer Supported Types
