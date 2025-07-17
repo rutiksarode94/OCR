@@ -72,7 +72,7 @@ define(['N/ui/serverWidget', 'N/runtime', 'N/file', 'N/record', './lstcptr_manua
                 var vendors = utils.getAllVendors();
 
                 // Load the HTML content from the File Cabinet
-                var htmlFile = file.load({ id: `SuiteScripts/LST Capture/${CONSTANTS.TEMPLATE_FILES.MANUALLY_UPLOAD_FILE}` });
+                var htmlFile = file.load({ id: `./${CONSTANTS.TEMPLATE_FILES.MANUALLY_UPLOAD_FILE}` });
                 var htmlContent = htmlFile.getContents()
                     .replace('{{subsidiaries}}', JSON.stringify(subsidiaries))
                     .replace('{{vendors}}', JSON.stringify(vendors))

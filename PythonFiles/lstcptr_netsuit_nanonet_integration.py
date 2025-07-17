@@ -178,6 +178,9 @@ def get_payload(input):
         "BillNumber": inference.get_field_value(label="BillNumber"),
         "vendor_address": inference.get_field_value(label="vendor_address"),
         "total": 0,
+        "totaltax":inference.get_field_value(label="totaltax"),
+        "total_amount": inference.get_field_value(label="total_amount"),  
+        "Subsidiary": inference.get_field_value(label="Subsidairy"),
         "items": get_line_items(inference),
         "originalfile": [
             {

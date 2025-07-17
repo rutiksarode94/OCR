@@ -319,7 +319,7 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * @returns {String} Edit URL
      */
     function generateEditUrl(internalId, accountId) {
-        return `https://${accountId}.app.netsuite.com/app/site/hosting/scriptlet.nl?script=3739&deploy=1&internalId=${internalId}`;
+        return `https://${accountId}.app.netsuite.com/app/site/hosting/scriptlet.nl?script=${constants.STAGING_RECORD_SPLIT_SUITLET.SCRIPT_ID}&deploy=${constants.STAGING_RECORD_SPLIT_SUITLET.DEPLOYMENT_ID}&internalId=${internalId}`;
     }
 
     /**
@@ -332,7 +332,7 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
      * @returns {String} Proceed URL
      */
     function generateProceedUrl(vendorId, subsidiaryId, internalId, fileId, jsonFileId, accountId) {
-        return `https://${accountId}.app/accounting/transactions/vendbill.nl?whence=&vendor=${vendorId}&subsidiary=${subsidiaryId}&vendorToBill=${internalId}&fileId=${fileId}&jsonFileId=${jsonFileId}`;
+        return `/app/accounting/transactions/vendbill.nl?whence=&vendor=${vendorId}&subsidiary=${subsidiaryId}&vendorToBill=${internalId}&fileId=${fileId}&jsonFileId=${jsonFileId}`;
     }
 
     /**

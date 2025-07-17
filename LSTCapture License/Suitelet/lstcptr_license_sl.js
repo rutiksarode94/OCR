@@ -1,30 +1,30 @@
-/*********************************************************************************************
- * Copyright © 2024, Oracle and/or its LST Counsaltacy Pvt. Ltd., All rights reserved.
+/*************************************************************************************
+ * Copyright © 2024, Oracle and/or its LST Consultancy Pvt. Ltd., All rights reserved.
  *
  * Name:            LSTCapture License (lstcptr_license_sl.js)
  *
- * Version:         1.1.0   -   26-Nov-2024  -   PB.     -   Initial development.
+ * Version:         1.0.0   -   26-Nov-2024  -   RS.     -   Initial development.
  *
- * Author:          LiveStrong Technologies.
+ * Author:          LiveStrong Technologies
  *
  * Purpose:         This Suitelet script is used to retrieve the license information for the LSTCapture Bundle.
  *
- * Script:          customscript_lstcptr_liccense_sl
- * Deploy:          customdeploy_lstcptr_liccense_sl
+ * Script:          customscript_lstcptr_license_sl
+ * Deploy:          customdeploy_lstcptr_license_sl
  *
  * Notes:
  *
- * Dependencies:
+ * Dependencies:    ./lstcptr_constants
  *
- *
- *********************************************************************************************/
+ *************************************************************************************/
+
 /**
-* @NApiVersion 2.1
-* @NScriptType Suitelet
-* @NModuleScope Public
-* @FileName lstcptr_liccense_sl.js
-*/
-define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 'N/ui/message', 'N/ui/serverWidget', 'N/url'],
+ * @NApiVersion 2.1
+ * @NScriptType Suitelet
+ * @NModuleScope Public
+ * @FileName lstcptr_license_sl.js
+ */
+define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 'N/ui/message', 'N/ui/serverWidget', 'N/email', './lstcptr_constants'],
     /**
      * @param {https} https
      * @param {config} config
@@ -32,137 +32,124 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
      * @param {record} record
      * @param {format} format
      * @param {runtime} runtime
-     * @param {message} message 
+     * @param {message} message
      * @param {serverWidget} serverWidget
+     * @param {email} email
+     * @param {Object} constants
      */
-    function (https, config, search, record, format, runtime, message, serverWidget, url) 
-    {
-        var strDebugTitle = "lstcptr_liccense_sl";
-        /**
-         * Definition of the Suitelet script trigger point.
-         *
-         * @param {Object} context
-         * @param {ServerRequest} context.request - Encapsulation of the incoming request
-         * @param {ServerResponse} context.response - Encapsulation of the Suitelet response
-         * @Since 2015.2
-        **/
-        function onRequest(context) 
-        {
-            try 
-            {
-                var request = context.request;
-                var response = context.response;
-                var nUserObj = runtime.getCurrentUser();
-                var nCurrentUserId = nUserObj.id;
-                var nUserRoleId = nUserObj.role;
-                var nUserName = nUserObj.name;
-                log.debug({ title: strDebugTitle, details: "nCurrentUserId : " + nCurrentUserId + " || nUserRoleId : " + nUserRoleId + " || nUserName : " + nUserName });
-    
-                if (request.method === 'GET') 
-                {   
-                    var form = serverWidget.createForm({
-                        title: 'License Overview',
+    function (https, config, search, record, format, runtime, message, serverWidget, email, constants) {
+        const strDebugTitle = constants.LICENSE_SL_DEBUG_TITLE;
+
+        function onRequest(context) {
+            try {
+                const { request, response } = context;
+                const nUserObj = runtime.getCurrentUser();
+                const nCurrentUserId = nUserObj.id;
+                const nUserRoleId = nUserObj.role;
+                const nUserName = nUserObj.name;
+                const accountId = runtime.accountId;
+                log.debug({ title: strDebugTitle, details: `nCurrentUserId: ${nCurrentUserId} || nUserRoleId: ${nUserRoleId} || nUserName: ${nUserName} || accountId: ${accountId}` });
+
+                if (request.method === 'GET') {
+                    const form = serverWidget.createForm({
+                        title: 'License Overview'
                     });
-    
-                    var licenseKeyField = form.addField({
-                        id: 'custpage_lstcptr_license_key',
+
+                    const licenseKeyField = form.addField({
+                        id: constants.CUSTOM_FIELDS.LICENSE_KEY,
                         type: serverWidget.FieldType.TEXT,
-                        label: 'License Key',
+                        label: 'License Key'
                     });
                     licenseKeyField.updateDisplayType({
-                        displayType: serverWidget.FieldDisplayType.INLINE,
+                        displayType: serverWidget.FieldDisplayType.INLINE
                     });
-    
-                    var accountIDField = form.addField({
-                        id: 'custpage_lstcptr_account_id',
+
+                    const accountIDField = form.addField({
+                        id: constants.CUSTOM_FIELDS.ACCOUNT_ID,
                         type: serverWidget.FieldType.TEXT,
-                        label: 'Account ID',
+                        label: 'Account ID'
                     });
                     accountIDField.updateDisplayType({
-                        displayType: serverWidget.FieldDisplayType.INLINE,
+                        displayType: serverWidget.FieldDisplayType.INLINE
                     });
-    
-                    var includedUsage = form.addField({
-                        id: 'custpage_lstcptr_included_usage',
+
+                    const includedUsage = form.addField({
+                        id: constants.CUSTOM_FIELDS.INCLUDED_USAGE,
                         type: serverWidget.FieldType.LABEL,
-                        label: 'Included Usage',
+                        label: 'Included Usage'
                     });
-                    
-                    var usageLimitField = form.addField({
-                        id: 'custpage_lstcptr_usage_limit',
+
+                    const usageLimitField = form.addField({
+                        id: constants.CUSTOM_FIELDS.USAGE_LIMIT,
                         type: serverWidget.FieldType.INLINEHTML,
-                        label: 'Included Usage',
+                        label: 'Included Usage'
                     });
-    
-                    var productName = form.addField({
-                        id: 'custpage_lstcptr_product_name',
+
+                    const productName = form.addField({
+                        id: constants.CUSTOM_FIELDS.PRODUCT_NAME,
                         type: serverWidget.FieldType.TEXT,
-                        label: 'Product Name',
+                        label: 'Product Name'
                     });
                     productName.updateDisplayType({
-                        displayType: serverWidget.FieldDisplayType.INLINE,
+                        displayType: serverWidget.FieldDisplayType.INLINE
                     });
-    
-                    var productVersion = form.addField({
-                        id: 'custpage_lstcptr_product_version',
+
+                    const productVersion = form.addField({
+                        id: constants.CUSTOM_FIELDS.PRODUCT_VERSION,
                         type: serverWidget.FieldType.TEXT,
-                        label: 'Product Version',
+                        label: 'Product Version'
                     });
                     productVersion.updateDisplayType({
-                        displayType: serverWidget.FieldDisplayType.INLINE,
+                        displayType: serverWidget.FieldDisplayType.INLINE
                     });
-    
-                    var bundleId = form.addField({
-                        id: 'custpage_lstcptr_bundle_id',
+
+                    const bundleId = form.addField({
+                        id: constants.CUSTOM_FIELDS.BUNDLE_ID,
                         type: serverWidget.FieldType.TEXT,
-                        label: 'Bundle ID',
+                        label: 'Bundle ID'
                     });
                     bundleId.updateDisplayType({
-                        displayType: serverWidget.FieldDisplayType.INLINE,
+                        displayType: serverWidget.FieldDisplayType.INLINE
                     });
-    
-                    var licensingTab = form.addTab({
-                        id: 'custpage_lstcptr_licensing_tab',
-                        label: 'Licensing',
+
+                    form.addTab({
+                        id: constants.CUSTOM_FIELDS.LICENSING_TAB,
+                        label: 'Licensing'
                     });
-    
-                    // Add License Details Sublist
-                    var licenseSublist = form.addSublist({
-                        id: 'custpage_lstcptr_license',
+
+                    const licenseSublist = form.addSublist({
+                        id: constants.CUSTOM_FIELDS.LICENSE_SUBLIST,
                         type: serverWidget.SublistType.LIST,
                         label: 'License',
-                        tab: 'custpage_lstcptr_licensing_tab',
+                        tab: constants.CUSTOM_FIELDS.LICENSING_TAB
                     });
-    
-                    var licenseStartDate = licenseSublist.addField({
-                        id: 'custpage_lstcptr_license_start_date',
+
+                    licenseSublist.addField({
+                        id: constants.CUSTOM_FIELDS.LICENSE_START_DATE,
                         type: serverWidget.FieldType.DATE,
                         label: 'License Start Date'
                     });
-    
-                    var licenseEndDate = licenseSublist.addField({
-                        id: 'custpage_lstcptr_license_end_date',
+
+                    licenseSublist.addField({
+                        id: constants.CUSTOM_FIELDS.LICENSE_END_DATE,
                         type: serverWidget.FieldType.DATE,
                         label: 'License End Date'
                     });
-    
-                    var licenseStatus = licenseSublist.addField({
-                        id: 'custpage_lstcptr_license_status',
+
+                    licenseSublist.addField({
+                        id: constants.CUSTOM_FIELDS.LICENSE_STATUS,
                         type: serverWidget.FieldType.TEXT,
                         label: 'License Status'
                     });
 
-                    var licensePlan = licenseSublist.addField({
-                        id: 'custpage_lstcptr_license_plan',
+                    licenseSublist.addField({
+                        id: constants.CUSTOM_FIELDS.LICENSE_PLAN,
                         type: serverWidget.FieldType.TEXT,
                         label: 'License Plan'
                     });
 
-    
-    
-                    var licenseData = fetchLicenseData();
-    
-                    // Set field values
+                    const licenseData = fetchLicenseData();
+
                     licenseKeyField.defaultValue = licenseData.licenseKey || '';
                     accountIDField.defaultValue = licenseData.accountId || '';
                     includedUsage.defaultValue = licenseData.includedUsage || '';
@@ -170,263 +157,268 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                     productVersion.defaultValue = licenseData.productVersion || '';
                     bundleId.defaultValue = licenseData.bundleId || '';
 
-                    log.debug("Start Date: ",  licenseData.startDate);
-                    log.debug("End Date: ", licenseData.endDate);
-                    log.debug("License Status: ", licenseData.licenseStatus);
-                    log.debug("license Plan: ",  licenseData.licensePlan);
-                   
-                     var nResponse = fetchLicenseResponse(accountIDField.defaultValue); // Fetch license response
-                     handleLicenseResponse(nResponse, form, licenseSublist, usageLimitField, licenseData); // Process and handle the response
-    
-                    form.addSubmitButton({
-                        label: 'Submit',
-                    });
-    
-                    // Write the form to the response
+                    const nResponse = fetchLicenseResponse(accountIDField.defaultValue);
+                    handleLicenseResponse(nResponse, form, licenseSublist, usageLimitField, licenseData);
+
+                    const nResponseData = nResponse && nResponse.body ? JSON.parse(nResponse.body) : {};
+                    const isExpired = nResponseData.expiredLicense === 'T' || (nResponseData.endDate && new Date(nResponseData.endDate) < new Date());
+                    const clientLicenseStatus = nResponseData.licenseStatus || '';
+                    if (isExpired || clientLicenseStatus === 'Inactive') {
+                        form.addButton({
+                            id: constants.CUSTOM_FIELDS.SEND_EMAIL_BUTTON,
+                            label: 'Send Email',
+                            functionName: 'sendEmail'
+                        });
+                    }
+
+                    form.clientScriptModulePath = constants.SCRIPT_FILES.SEND_EMAIL_CS;
+
                     response.writePage(form);
-                } 
-    
+                } else if (request.method === 'POST') {
+                    try {
+                        const apiKey = request.parameters[constants.CUSTOM_FIELDS.AI_API_KEY];
+                        const modelId = request.parameters[constants.CUSTOM_FIELDS.AI_MODEL_ID];
+
+                        const orderCaptureLicenseSearch = search.create({
+                            type: constants.RECORD_TYPES.LICENSE_RECORD,
+                            filters: [],
+                            columns: [search.createColumn({ name: constants.STANDARD_FIELDS.FILE.INTERNAL_ID, label: 'Internal ID' })]
+                        });
+
+                        const searchResult = orderCaptureLicenseSearch.run().getRange({ start: 0, end: 1 });
+                        if (searchResult.length) {
+                            const recordId = searchResult[0].getValue(constants.STANDARD_FIELDS.FILE.INTERNAL_ID);
+                            log.debug({ title: strDebugTitle, details: `Record ID: ${recordId}, API Key: ${apiKey}, Model ID: ${modelId}` });
+                        }
+
+                        context.response.sendRedirect({
+                            type: 'SUITELET',
+                            identifier: constants.LICENSE_SUITELET.SCRIPT_ID,
+                            id: constants.LICENSE_SUITELET.DEPLOYMENT_ID
+                        });
+                    } catch (e) {
+                        log.error({ title: strDebugTitle, details: `Error processing POST request: ${e.message}` });
+                    }
+                }
             } catch (e) {
-                log.error({ title: strDebugTitle, details: 'Error processing request: ' + e.message });
-            }
-            
-        }
-    
-        /**
-         * Defines the function to get the formatted date
-         *  @param {Date} date - The date to be formatted
-         * @returns {String} - Returns the formatted date
-         * since 2015.2
-         */
-        function getFormattedDate(date) 
-        {
-            try 
-            {
-                // If the input date is a string, ensure it's converted to a valid Date object
-                if (!date) {
-                    log.error({ title: 'Invalid Input', details: 'The provided date is null, undefined, or empty.' });
-                    return null; // Return null for invalid input
-                }
-                var dateObj = new Date(date);
-                // Check if the date is valid
-                if (isNaN(dateObj.getTime())) {
-                    log.error({ title: 'Invalid Date', details: 'The provided date is invalid: ' + date });
-                    return null; // Return null for invalid dates
-                }
-                // Format the date to NetSuite's expected format (DD-Mon-YYYY)
-                var formattedDate = format.format({
-                    value: dateObj,
-                    type: format.Type.DATE
+                log.error({ title: strDebugTitle, details: `Error processing request: ${e.message}` });
+                context.response.writePage({
+                    title: 'Error',
+                    contents: `<p>An error occurred while processing the request: ${e.message}</p>`
                 });
-    
-                log.debug({ title: strDebugTitle, details: 'Formatted Date: ' + formattedDate });
-                return formattedDate; // Return the formatted date
-            } catch (err) {
-                log.error({ title: strDebugTitle + ' (getFormattedDate) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
-                return null; // Return null in case of an error
             }
         }
-    
-        /**
-         * Defines the function to get the count of Sales Order Staging records based on the duration limit
-         * @param {String} durationLimit - The duration limit to filter the records
-         * @returns {Number} - Returns the count of Sales Order Staging records
-         * since 2015.2
-         */
-        function getLSTCPTRStagingRecordCount(durationLimit) 
-        {
-            var rtnData = "";
-            try
-            {
-                var filters = [
-                    ["isinactive", "is", "F"],
-                    "AND",
-                    ["custrecord_lstcptr_process_status", "noneof", "2"]
-                ];
-        
-                if (durationLimit === "Month") {
-                    filters.push("AND", ["created","within","thismonth"]);
-                } else if (durationLimit === "Year") {
-                    filters.push("AND", ["created","within","thisyear"]);
-                }
-        
-                var soStagingSearch = search.create({
-                    type: "customrecord_lstcptr_vendor_bill_process",
-                    filters: filters,
-                    columns: [
-                        search.createColumn({ name: "internalid", label: "Internal ID" })
-                    ]
-                });
-                 log.debug({ title: strDebugTitle, details: JSON.stringify(soStagingSearch)});
-         
-                rtnData = soStagingSearch.runPaged().count;
-                log.debug({ title: strDebugTitle, details: "SO Staging record count: " + rtnData});
-            } catch (err) {
-                log.error({ title: strDebugTitle + ' (getLSTCPTRStagingRecordCount) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
-            }
-            return rtnData;
-        }
-    
-        /**
-         * Fetches the license data from the custom record.
-         * @returns {Object} licenseData - The license data object.
-         */
-        function fetchLicenseData() 
-        {
-            var licenseData = {};
-            try
-            {
-                var orderCaptureLicenseSearch = search.create({
-                    type: 'customrecord_lstcptr_license',
-                    filters: [], // Add filters if needed
-                    columns: [
-                        search.createColumn({ name: 'internalid', sort: search.Sort.DESC, label: 'Internal ID' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_system_gen_licensekey', label: 'System Generated License Key' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_account_id', label: 'Account ID' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_license_status', label: 'License Status' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_included_usage', label: 'Included Usage' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_license_product_name', label: 'Product Name' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_product_version', label: 'Product Version' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_bundle_id', label: 'Bundle ID' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_license_usage_limit', label: 'Usage Limit' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_duration_limit', label: 'Duration Limit' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_license_start_date', label: 'Start Date' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_license_end_date', label: 'End Date' }),
-                        search.createColumn({ name: 'custrecord_lstcptr_license_plan', label: 'License Plan' }),
-                    ]
-                });
-    
-                var searchResult = orderCaptureLicenseSearch.run().getRange({ start: 0, end: 1 })[0];
-                if (searchResult) {
-                    licenseData.licenseKey = searchResult.getValue('custrecord_lstcptr_system_gen_licensekey');
-                    licenseData.accountId = searchResult.getValue('custrecord_lstcptr_account_id');
-                    licenseData.licenseStatus = searchResult.getValue('custrecord_lstcptr_license_status') ? 'Active' : 'Inactive';
-                    licenseData.includedUsage = searchResult.getValue('custrecord_lstcptr_included_usage');
-                    licenseData.productName = searchResult.getValue('custrecord_lstcptr_license_product_name');
-                    licenseData.productVersion = searchResult.getValue('custrecord_lstcptr_product_version');
-                    licenseData.bundleId = searchResult.getValue('custrecord_lstcptr_bundle_id');
-                    licenseData.internalId = searchResult.getValue('internalid');
-                    licenseData.usageLimit = searchResult.getValue('custrecord_lstcptr_license_usage_limit');
-                    licenseData.startDate = searchResult.getValue('custrecord_lstcptr_license_start_date');
-                    licenseData.endDate = searchResult.getValue('custrecord_lstcptr_license_end_date');
-                    licenseData.licensePlan = searchResult.getValue('custrecord_lstcptr_license_plan');
-                }
-    
-                log.debug({ title: strDebugTitle, details: 'License Data: ' + JSON.stringify(licenseData) });
-            } catch (err) {
-                log.error({ title: strDebugTitle + ' (fetchLicenseData) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
-            }
-            return licenseData;
-        }
-    
-        /**
-         * Handles the license response from the external Suitelet.
-         * @param {Object} nResponse - The response object from the external Suitelet.
-         * @param {Form} form - The Suitelet form object.
-         * @param {Sublist} licenseSublist - The license sublist object.
-         * @param {Field} usageLimitField - The usage limit field object.
-         * @param {Object} licenseData - The license data object.
-         * @returns {void}
-         * since 2015.2
-         */
-        function handleLicenseResponse(nResponse, form, licenseSublist, usageLimitField, licenseData) 
-        {
-            try 
-            {
-                log.debug({ title: strDebugTitle, details: 'Parsed Response Body: ' + JSON.stringify(nResponse.body) });
-                var nResponseData = JSON.parse(nResponse.body);
-                log.debug({ title: strDebugTitle, details: 'Parsed Response Data: ' + JSON.stringify(nResponseData) });
-    
-                var { formattedStartDate, formattedEndDate, clientLicenseStatus } = formatAndLogLicenseDates(nResponseData);
-                var { usageLimit, durationLimit, soStagingRecordCount } = displayUsageInfo(nResponseData, usageLimitField);
-    
-                displayWarnings(form, clientLicenseStatus, soStagingRecordCount, usageLimit);
-                updateLicenseRecord(licenseData.internalId, formattedStartDate, formattedEndDate, clientLicenseStatus, usageLimit, durationLimit);
-                setLicenseSublistValues(licenseSublist, formattedStartDate, formattedEndDate, clientLicenseStatus, licenseData.licensePlan);
-               
-            } catch (err) {
-                log.error({ title: strDebugTitle + ' (handleLicenseResponse) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
-            }
-        }
-   
+
         function fetchLicenseResponse(accountIDValue) {
-            var strDebugTitle = 'fetchLicenseResponse';
+            const debugTitle = 'fetchLicenseResponse';
             try {
-                var nResponse = https.requestSuitelet({
-                    scriptId: 'customscript_lstcptr_authorization_sl',
-                    deploymentId: 'customdeploy_lstcptr_authorization_sl',
+                const nResponse = https.requestSuitelet({
+                    scriptId: constants.AUTHORIZATION_SUITELET.SCRIPT_ID,
+                    deploymentId: constants.AUTHORIZATION_SUITELET.DEPLOYMENT_ID,
                     method: https.Method.GET,
                     urlParams: {
-                        accountID: accountIDValue 
+                        accountID: accountIDValue
                     },
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
-        
-                log.debug({ title: strDebugTitle, details: 'Raw Response Body: ' + nResponse.body });
-        
+
+                log.debug({ title: debugTitle, details: `Raw Response Body: ${nResponse.body}` });
+
                 if (nResponse.code !== 200) {
-                    log.error({ title: strDebugTitle, details: 'Non-200 Response Code: ' + nResponse.code });
+                    log.error({ title: debugTitle, details: `Non-200 Response Code: ${nResponse.code}` });
                     throw new Error('Failed to fetch license data: Non-200 response.');
                 }
-        
+
                 return nResponse;
             } catch (err) {
                 log.error({
-                    title: strDebugTitle + ' (fetchLicenseResponse) Error',
+                    title: `${debugTitle} (fetchLicenseResponse) Error`,
                     details: JSON.stringify({ code: err.name, message: err.message })
+                });
+                return null;
+            }
+        }
+
+        function getFormattedDate(date) {
+            try {
+                if (!isValidString(date)) {
+                    log.error({ title: strDebugTitle, details: 'The provided date is null, undefined, or empty.' });
+                    return null;
+                }
+                const dateObj = new Date(date);
+                if (isNaN(dateObj.getTime())) {
+                    log.error({ title: strDebugTitle, details: `The provided date is invalid: ${date}` });
+                    return null;
+                }
+                const formattedDate = format.format({
+                    value: dateObj,
+                    type: format.Type.DATE
+                });
+
+                log.debug({ title: strDebugTitle, details: `Formatted Date: ${formattedDate}` });
+                return formattedDate;
+            } catch (err) {
+                log.error({ title: `${strDebugTitle} (getFormattedDate) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
+                return null;
+            }
+        }
+
+        function getLSTCPTRRecordCount(durationLimit) {
+            let rtnData = 0;
+            try {
+                const filters = [
+                    ['isinactive', 'is', 'F'],
+                    'AND',
+                    ['custrecord_lstcptr_process_status', 'noneof', constants.PROCESS_STATUSES.EXCLUDED_STATUSES]
+                ];
+
+                if (durationLimit === 'Month') {
+                    filters.push('AND', ['created', 'within', 'thismonth']);
+                } else if (durationLimit === 'Year') {
+                    filters.push('AND', ['created', 'within', 'thisyear']);
+                }
+
+                const soStagingSearch = search.create({
+                    type: constants.RECORD_TYPES.VENDOR_BILL_STAGING,
+                    filters,
+                    columns: [
+                        search.createColumn({ name: constants.STANDARD_FIELDS.FILE.INTERNAL_ID, label: 'Internal ID' })
+                    ]
+                });
+                log.debug({ title: strDebugTitle, details: JSON.stringify(soStagingSearch) });
+
+                rtnData = soStagingSearch.runPaged().count;
+                log.debug({ title: strDebugTitle, details: `SO Staging record count: ${rtnData}` });
+            } catch (err) {
+                log.error({ title: `${strDebugTitle} (getLSTCPTRRecordCount) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
+            }
+            return rtnData;
+        }
+
+        function fetchLicenseData() {
+            const licenseData = {};
+            try {
+                const orderCaptureLicenseSearch = search.create({
+                    type: constants.RECORD_TYPES.LICENSE_RECORD,
+                    filters: [],
+                    columns: [
+                        search.createColumn({ name: constants.STANDARD_FIELDS.FILE.INTERNAL_ID, sort: search.Sort.DESC, label: 'Internal ID' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.SYSTEM_GEN_LICENSE_KEY, label: 'System Generated License Key' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.ACCOUNT_ID, label: 'Account ID' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.LICENSE_STATUS, label: 'License Status' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.INCLUDED_USAGE, label: 'Included Usage' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.PRODUCT_NAME, label: 'Product Name' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.PRODUCT_VERSION, label: 'Product Version' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.BUNDLE_ID, label: 'Bundle ID' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.USAGE_LIMIT, label: 'Usage Limit' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.DURATION_LIMIT, label: 'Duration Limit' }),
+                        search.createColumn({ name: constants.LICENSE_RECORD_FIELDS.EXPIRED_LICENSE, label: 'Expired License' }),
+                    ]
+                });
+
+                const searchResult = orderCaptureLicenseSearch.run().getRange({ start: 0, end: 1 })[0];
+                if (searchResult) {
+                    licenseData.licenseKey = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.SYSTEM_GEN_LICENSE_KEY);
+                    licenseData.accountId = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.ACCOUNT_ID);
+                    licenseData.licenseStatus = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.LICENSE_STATUS) ? 'Active' : 'Inactive';
+                    licenseData.includedUsage = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.INCLUDED_USAGE);
+                    licenseData.productName = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.PRODUCT_NAME);
+                    licenseData.productVersion = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.PRODUCT_VERSION);
+                    licenseData.bundleId = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.BUNDLE_ID);
+                    licenseData.internalId = searchResult.getValue(constants.STANDARD_FIELDS.FILE.INTERNAL_ID);
+                    licenseData.expiredLicense = searchResult.getValue(constants.LICENSE_RECORD_FIELDS.EXPIRED_LICENSE);
+                }
+
+                log.debug({ title: strDebugTitle, details: `License Data: ${JSON.stringify(licenseData)}` });
+            } catch (err) {
+                log.error({ title: `${strDebugTitle} (fetchLicenseData) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
+            }
+            return licenseData;
+        }
+
+        function handleLicenseResponse(nResponse, form, licenseSublist, usageLimitField, licenseData) {
+            try {
+                if (!nResponse || !nResponse.body) {
+                    log.error({ title: strDebugTitle, details: 'Invalid or undefined response from fetchLicenseResponse' });
+                    form.addPageInitMessage({
+                        type: message.Type.ERROR,
+                        message: 'Failed to fetch license data. Please try again or contact support.',
+                        title: 'Error Fetching License Data'
+                    });
+                    return;
+                }
+
+                const nResponseData = JSON.parse(nResponse.body);
+                log.debug({ title: strDebugTitle, details: `Parsed Response Data: ${JSON.stringify(nResponseData)}` });
+
+                const { formattedStartDate, formattedEndDate, clientLicenseStatus, isExpired, licensePlan } = formatAndLogLicenseDates(nResponseData);
+                const { usageLimit, durationLimit, lstcptrRecordCount } = displayUsageInfo(nResponseData, usageLimitField);
+
+                displayWarnings(form, clientLicenseStatus, lstcptrRecordCount, usageLimit, isExpired);
+                setLicenseSublistValues(licenseSublist, formattedStartDate, formattedEndDate, clientLicenseStatus, licensePlan);
+                updateLicenseRecord(licenseData.internalId, formattedStartDate, formattedEndDate, clientLicenseStatus, usageLimit, durationLimit, isExpired);
+            } catch (err) {
+                log.error({ title: `${strDebugTitle} (handleLicenseResponse) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
+                form.addPageInitMessage({
+                    type: message.Type.ERROR,
+                    message: `An error occurred while processing the license data: ${err.message}`,
+                    title: 'Error Processing License Data'
                 });
             }
         }
-        
-        
 
-        /**
-         * Formats and logs the license dates.
-         * @param {Object} nResponseData - The response data object from the external Suitelet.
-         * @returns {Object} - The formatted license dates object.
-         * since 2015.2
-         */
-        function formatAndLogLicenseDates(nResponseData) 
-        {
-            try
-            {
-                var clientLicenseStartDate = nResponseData.startDate;
-                var clientLicenseEndDate = nResponseData.endDate;
-                var clientLicenseStatus = nResponseData.licenseStatus;
-    
-                log.debug({ title: strDebugTitle, details: 'Client License Start Date: ' + clientLicenseStartDate });
-    
-                var formattedStartDate = isValidString(clientLicenseStartDate) ? getFormattedDate(clientLicenseStartDate) : null;
-                var formattedEndDate = isValidString(clientLicenseEndDate) ? getFormattedDate(clientLicenseEndDate) : null;
-    
-                log.debug({ title: strDebugTitle, details: 'Formatted Start Date: ' + formattedStartDate });
-                log.debug({ title: strDebugTitle, details: 'Formatted End Date: ' + formattedEndDate });
-    
-                return { formattedStartDate, formattedEndDate, clientLicenseStatus };
+        function formatAndLogLicenseDates(nResponseData) {
+            try {
+                const clientLicenseStartDate = nResponseData.startDate;
+                const clientLicenseEndDate = nResponseData.endDate;
+                let clientLicenseStatus = nResponseData.licenseStatus;
+                const licensePlan = nResponseData.licensePlan || '';
+                const isExpired = nResponseData.expiredLicense === 'T' || (clientLicenseEndDate && new Date(clientLicenseEndDate) < new Date());
+                if (isExpired) {
+                    clientLicenseStatus = 'Inactive';
+                }
+
+                log.debug({ title: strDebugTitle, details: `Client License Start Date: ${clientLicenseStartDate}` });
+
+                const formattedStartDate = isValidString(clientLicenseStartDate) ? getFormattedDate(clientLicenseStartDate) : null;
+                const formattedEndDate = isValidString(clientLicenseEndDate) ? getFormattedDate(clientLicenseEndDate) : null;
+
+                if (formattedStartDate && formattedEndDate && new Date(formattedEndDate) <= new Date(formattedStartDate)) {
+                    throw new Error('End date must be greater than start date.');
+                }
+
+                log.debug({ title: strDebugTitle, details: `Formatted Start Date: ${formattedStartDate}` });
+                log.debug({ title: strDebugTitle, details: `Formatted End Date: ${formattedEndDate}` });
+
+                return { formattedStartDate, formattedEndDate, clientLicenseStatus, isExpired, licensePlan };
             } catch (err) {
-                log.error({ title: strDebugTitle + ' (formatAndLogLicenseDates) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+                log.error({ title: `${strDebugTitle} (formatAndLogLicenseDates) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
+                throw err;
             }
         }
-    
-        /**
-         * Displays the usage information on the Suitelet form.
-         * @param {Object} nResponseData - The response data object from the external Suitelet.
-         * @param {Field} usageLimitField - The usage limit field object.
-         * @returns {Object} - The usage information object.
-         * since 2015.2
-         */
-        function displayUsageInfo(nResponseData, usageLimitField) 
-        {
-            try
-            {
-                var usageLimit = nResponseData.usageLimit;
-                var durationLimit = nResponseData.durationLimit;
-                var soStagingRecordCount = getLSTCPTRStagingRecordCount(durationLimit);
-    
-                log.debug({ title: strDebugTitle, details: 'Usage Limit: ' + usageLimit + '; Duration Limit: ' + durationLimit });
-    
+
+        function displayUsageInfo(nResponseData, usageLimitField) {
+            try {
+                const licensePlan = nResponseData.licensePlan || constants.LICENSE_PLANS.TRIAL;
+                const durationLimit = nResponseData.durationLimit || 'Month';
+                const lstcptrRecordCount = getLSTCPTRRecordCount(durationLimit);
+
+                let usageLimit = 0;
+                let usageLabel = '';
+
+                if (licensePlan === constants.LICENSE_PLANS.TRIAL) {
+                    usageLimit = 100;
+                    usageLabel = `${usageLimit}/${durationLimit}`;
+                } else if (licensePlan === constants.LICENSE_PLANS.UNLIMITED) {
+                    usageLimit = Number.MAX_SAFE_INTEGER;
+                    usageLabel = `Unlimited/${durationLimit}`;
+                } else {
+                    usageLimit = 100;
+                    usageLabel = `${usageLimit}/${durationLimit}`;
+                }
+
                 usageLimitField.defaultValue = `
                     <div style="
                         border: 1px solid #ccc;
@@ -436,202 +428,151 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                         width: 110px;
                         font-size: 16px;
                         color: black;">
-                        ${soStagingRecordCount}
+                        ${lstcptrRecordCount}
                         <div style="color: #7f7f82; font-size: 12px;">
-                        ${usageLimit}/${durationLimit}
+                        ${usageLabel}
                         </div>
                     </div>`;
-    
-                return { usageLimit, durationLimit, soStagingRecordCount };
+
+                return { usageLimit, durationLimit, lstcptrRecordCount };
             } catch (err) {
-                log.error({ title: strDebugTitle + ' (displayUsageInfo) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+                log.error({
+                    title: `${strDebugTitle} (displayUsageInfo) Error`,
+                    details: JSON.stringify({ code: err.name, message: err.message })
+                });
+                return { usageLimit: 0, durationLimit: '', lstcptrRecordCount: 0 };
             }
         }
-    
-        /**
-         * Displays warning messages on the Suitelet form based on the license status and usage limit.
-         * @param {Form} form - The Suitelet form object.
-         * @param {String} clientLicenseStatus - The client license status.
-         * @param {Number} soStagingRecordCount - The count of Sales Order Staging records.
-         * @param {Number} usageLimit - The usage limit.
-         * @returns {void}
-         * since 2015.2
-         */
-        function displayWarnings(form, clientLicenseStatus, soStagingRecordCount, usageLimit) 
-        {
-            try
-            {
-                if (clientLicenseStatus === 'Inactive' && soStagingRecordCount > usageLimit) {
+
+        function displayWarnings(form, clientLicenseStatus, lstcptrRecordCount, usageLimit, isExpired) {
+            try {
+                if (isExpired) {
                     form.addPageInitMessage({
                         type: message.Type.WARNING,
-                        message: 'Your LSTCapture license is inactive and your usage limit has been exceeded. Please contact support to reactivate your license and request an increase in your usage limit.',
-                        title: 'License Expired and Usage Limit Exceeded'
+                        message: 'Your OrderPilot license has expired. Please contact support to renew your license.',
+                        title: 'License Expired'
+                    });
+                } else if (clientLicenseStatus === 'Inactive' && lstcptrRecordCount > usageLimit) {
+                    form.addPageInitMessage({
+                        type: message.Type.WARNING,
+                        message: 'Your OrderPilot license is inactive and your usage limit has been exceeded. Please contact support to reactivate your license and request an increase in your usage limit.',
+                        title: 'License Inactive and Usage Limit Exceeded'
                     });
                 } else if (clientLicenseStatus === 'Inactive') {
                     form.addPageInitMessage({
                         type: message.Type.WARNING,
-                        message: 'Your LSTCapture license is inactive. Please contact support to reactivate your license.',
-                        title: 'License Expired'
+                        message: 'Your OrderPilot license is inactive. Please contact support to reactivate your license.',
+                        title: 'License Inactive'
                     });
-                } else if (soStagingRecordCount > usageLimit) {
+                } else if (lstcptrRecordCount > usageLimit) {
                     form.addPageInitMessage({
                         type: message.Type.WARNING,
-                        message: 'Your LSTCapture license usage limit has been exceeded. Please contact support to request an increase in your usage limit.',
+                        message: 'Your OrderPilot license usage limit has been exceeded. Please contact support to request an increase in your usage limit.',
                         title: 'Usage Limit Exceeded'
                     });
                 }
             } catch (err) {
-                log.error({ title: strDebugTitle + ' (displayWarnings) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+                log.error({ title: `${strDebugTitle} (displayWarnings) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
             }
         }
-    
-        /**
-         * Sets the values of the license sublist fields.
-         * @param {Sublist} licenseSublist - The license sublist object.
-         * @param {String} formattedStartDate - The formatted start date.
-         * @param {String} formattedEndDate - The formatted end date.
-         * @param {String} clientLicenseStatus - The client license status.
-         * @returns {void}
-         * since 2015.2
-         */
-        function setLicenseSublistValues(licenseSublist, formattedStartDate, formattedEndDate, clientLicenseStatus, licensePlanId) 
-        {
-            var licensePlanText = getLicensePlanName(licensePlanId);
-            log.debug("License Plan: ", licensePlanText);
-            try
-            {
+
+        function setLicenseSublistValues(licenseSublist, formattedStartDate, formattedEndDate, clientLicenseStatus, licensePlan) {
+            const licensePlanText = getLicensePlanText(licensePlan);
+            try {
                 licenseSublist.setSublistValue({
-                    id: 'custpage_lstcptr_license_start_date',
+                    id: constants.CUSTOM_FIELDS.LICENSE_START_DATE,
                     line: 0,
                     value: formattedStartDate || null
                 });
-    
+
                 licenseSublist.setSublistValue({
-                    id: 'custpage_lstcptr_license_end_date',
+                    id: constants.CUSTOM_FIELDS.LICENSE_END_DATE,
                     line: 0,
                     value: formattedEndDate || null
                 });
 
                 licenseSublist.setSublistValue({
-                    id: 'custpage_lstcptr_license_plan',
+                    id: constants.CUSTOM_FIELDS.LICENSE_STATUS,
                     line: 0,
-                    value: licensePlanText || null
-                });
-    
-                licenseSublist.setSublistValue({
-                    id: 'custpage_lstcptr_license_status',
-                    line: 0,
-                    value: clientLicenseStatus === 'Active' 
-                        ? '<p style="color:#32CD32; margin-left: 5px;">Active</p>' 
+                    value: clientLicenseStatus === 'Active'
+                        ? '<p style="color:#32CD32; margin-left: 5px;">Active</p>'
                         : '<p style="color:red; margin-left: 5px;">Inactive</p>'
                 });
+
+                licenseSublist.setSublistValue({
+                    id: constants.CUSTOM_FIELDS.LICENSE_PLAN,
+                    line: 0,
+                    value: licensePlanText || ''
+                });
             } catch (err) {
-                log.error({ title: strDebugTitle + ' (setLicenseSublistValues) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+                log.error({ title: `${strDebugTitle} (setLicenseSublistValues) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
             }
         }
 
-        function getLicensePlanName(licenseplanId) {
-            var strDebugTitle = 'getLicensePlanName';
-            var planName = '';
-        
+        function updateLicenseRecord(recordId, formattedStartDate, formattedEndDate, clientLicenseStatus, usageLimit, durationLimit, isExpired) {
             try {
-                if (!licenseplanId) {
-                    log.error({ title: strDebugTitle, details: 'No license plan ID provided' });
-                    return '';
-                }
-        
-                planName = search.lookupFields({
-                    type: 'customlist_lstcptr_license_plan',
-                    id: licenseplanId,
-                    columns: ['name']
-                }).name;
-        
-                log.debug({ title: strDebugTitle, details: 'License Plan Name: ' + planName });
-            } catch (err) {
-                log.error({
-                    title: strDebugTitle + ' Error',
-                    details: JSON.stringify({ code: err.name, message: err.message })
-                });
-            }
-        
-            return planName;
-        }
-        
-    
-        /**
-         * Updates the license record with the formatted start and end dates, client license status, usage limit, and duration limit.
-         * @param {String} recordId - The internal ID of the license record.
-         * @param {String} formattedStartDate - The formatted start date.
-         * @param {String} formattedEndDate - The formatted end date.
-         * @param {String} clientLicenseStatus - The client license status.
-         * @param {Number} usageLimit - The usage limit.
-         * @param {String} durationLimit - The duration limit.
-         * @returns {void}
-         * since 2015.2
-         */
-        function updateLicenseRecord(recordId, formattedStartDate, formattedEndDate, clientLicenseStatus, usageLimit, durationLimit) 
-        {
-            try {
-                var orderCaptureLicenseRecord = record.load({
-                    type: 'customrecord_lstcptr_license',
+                const orderCaptureLicenseRecord = record.load({
+                    type: constants.RECORD_TYPES.LICENSE_RECORD,
                     id: recordId
                 });
 
-                var parsedStartDate = formattedStartDate ? format.parse({
+                const parsedStartDate = formattedStartDate ? format.parse({
                     value: formattedStartDate,
                     type: format.Type.DATE
                 }) : null;
 
-                var parsedEndDate = formattedEndDate ? format.parse({
+                const parsedEndDate = formattedEndDate ? format.parse({
                     value: formattedEndDate,
                     type: format.Type.DATE
                 }) : null;
 
-                // Validation: End Date must be after Start Date
                 if (parsedStartDate && parsedEndDate && parsedEndDate <= parsedStartDate) {
-                    log.debug('DateValliddation','End Date must be greater than Start Date.');
+                    throw new Error('End date must be greater than start date.');
                 }
 
-                // Check for expiration
-                var isExpired = false;
-                clientLicenseStatus = 'Active';
-                var today = new Date();
-                if (parsedEndDate && parsedEndDate <= today) {
-                    isExpired = true;
-                    clientLicenseStatus = 'Inactive';
-                }
-
-                orderCaptureLicenseRecord.setValue('custrecord_lstcptr_client_license_start_date', parsedStartDate);
-                orderCaptureLicenseRecord.setValue('custrecord_lstcptr_client_license_end_date', parsedEndDate);
-                orderCaptureLicenseRecord.setValue('custrecord_lstcptr_client_license_status', clientLicenseStatus);
-                orderCaptureLicenseRecord.setValue('custrecord_lstcptr_client_usage_limit', usageLimit);
-                orderCaptureLicenseRecord.setText('custrecord_lstcptr_client_duration_limit', durationLimit);
-                orderCaptureLicenseRecord.setValue('custrecord_lstcptr_expired_license', isExpired); // New checkbox handling
-
+                orderCaptureLicenseRecord.setValue(constants.LICENSE_RECORD_FIELDS.START_DATE, parsedStartDate);
+                orderCaptureLicenseRecord.setValue(constants.LICENSE_RECORD_FIELDS.END_DATE, parsedEndDate);
+                orderCaptureLicenseRecord.setValue(constants.LICENSE_RECORD_FIELDS.LICENSE_STATUS, clientLicenseStatus === 'Active');
+                orderCaptureLicenseRecord.setValue(constants.LICENSE_RECORD_FIELDS.USAGE_LIMIT, usageLimit);
+                orderCaptureLicenseRecord.setText(constants.LICENSE_RECORD_FIELDS.DURATION_LIMIT, durationLimit);
+                orderCaptureLicenseRecord.setValue(constants.LICENSE_RECORD_FIELDS.EXPIRED_LICENSE, !!isExpired);
                 orderCaptureLicenseRecord.save();
 
                 log.debug({ title: strDebugTitle, details: 'License record updated successfully.' });
             } catch (err) {
-                log.error({ title: strDebugTitle + ' (updateLicenseRecord) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
-
+                log.error({ title: `${strDebugTitle} (updateLicenseRecord) Error`, details: JSON.stringify({ code: err.name, message: err.message }) });
+                throw err;
             }
         }
-  
-    
-        /**
-         * Helper function to check if a string is valid (non-empty and not null).
-         * @param {string} value - String to be checked
-         * @returns {boolean} True if the string is valid, false otherwise
-         */
-        function isValidString (value) 
-        {
-            if (value != 'null' && value != null && value != '' && value != ' ' && value != undefined && value != 'undefined' && value != 'NaN' && value != NaN)
-                return true;
-            else
-                return false;
+
+        function getLicensePlanText(licensePlanId) {
+            const debugTitle = 'getLicensePlanText';
+            try {
+                if (!licensePlanId) {
+                    log.debug(debugTitle, 'No license plan ID provided');
+                    return '';
+                }
+
+                const result = search.lookupFields({
+                    type: constants.CUSTOM_LISTS.LICENSE_PLAN,
+                    id: licensePlanId,
+                    columns: ['name']
+                });
+
+                const planName = result.name || '';
+                log.debug(debugTitle, `License Plan Name: ${planName}`);
+                return planName;
+            } catch (e) {
+                log.error(`${debugTitle} Error`, e.message);
+                return '';
+            }
         }
-    
+
+        function isValidString(value) {
+            return value != null && value !== '' && value !== 'undefined' && value !== 'NaN' && !isNaN(new Date(value).getTime());
+        }
+
         return {
-            onRequest: onRequest
+            onRequest
         };
-    });         
+    });

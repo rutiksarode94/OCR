@@ -599,6 +599,7 @@ define(['N/ui/serverWidget', 'N/record', 'N/file', 'N/url', 'N/search', 'N/runti
         try {
             var vendorSearch = search.create({
                 type: search.Type.VENDOR,
+                filters:['isinactive','is',false],
                 columns: ['internalid', 'entityid', 'companyname']
             });
 

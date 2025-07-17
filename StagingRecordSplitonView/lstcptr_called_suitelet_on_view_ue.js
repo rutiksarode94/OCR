@@ -1,7 +1,7 @@
 /*********************************************************************************************
 * Copyright © 2025, Oracle and/or its LST Counsaltacy Pvt. Ltd., All rights reserved.
 *
-* Name:            Redirect to Split Screen on View(lstcptr_called_suitelet_on_view.js)
+* Name:            Redirect to Split Screen on View(lstcptr_called_suitelet_on_view_ue.js)
 *
 * Version:         1.0.0   -   12-March-2025 -      
 *

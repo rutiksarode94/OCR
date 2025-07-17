@@ -25,8 +25,8 @@
  * @NModuleScope Public
  * @FileName lstcptr_liccense_sl.js
  */
-define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 'N/ui/message', 'N/ui/serverWidget'],
-    function (https, config, search, record, format, runtime, message, serverWidget) 
+define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 'N/ui/message', 'N/ui/serverWidget', 'N/email'],
+    function (https, config, search, record, format, runtime, message, serverWidget, email) 
     {
         var strDebugTitle = "lstcptr_liccense_sl";
 
@@ -150,10 +150,11 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                     productName.defaultValue = licenseData.productName || '';
                     productVersion.defaultValue = licenseData.productVersion || '';
                     bundleId.defaultValue = licenseData.bundleId || '';
-            
+               
                     var nResponse = fetchLicenseResponse(accountIDField.defaultValue);
                     handleLicenseResponse(nResponse, form, licenseSublist, usageLimitField, licenseData);
 
+                    // Add Send Email button only if license is expired or inactive
                     var nResponseData = nResponse && nResponse.body ? JSON.parse(nResponse.body) : {};
                     var isExpired = nResponseData.expiredLicense === 'T' || (nResponseData.endDate && new Date(nResponseData.endDate) < new Date());
                     var clientLicenseStatus = nResponseData.licenseStatus || '';
@@ -171,7 +172,6 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                     response.writePage(form);
                 } else if (request.method === 'POST') 
                 {
-                    // [Existing POST handling code remains unchanged]
                     try 
                     {
                         var apiKey = request.parameters.custpage_lstcptr_ai_api_key;
@@ -218,7 +218,6 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
             }
         }
 
-        // Replaced fetchLicenseResponse function
         function fetchLicenseResponse(accountIDValue) {
             var strDebugTitle = 'fetchLicenseResponse';
             try {
@@ -251,7 +250,6 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
             }
         }
 
-        // [Remaining functions remain unchanged]
         function getFormattedDate(date) 
         {
             try 
@@ -422,16 +420,27 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
             }
         }
 
-        function displayUsageInfo(nResponseData, usageLimitField) 
-        {
-            try
-            {
-                var usageLimit = nResponseData.usageLimit || 0;
-                var durationLimit = nResponseData.durationLimit || '';
+        function displayUsageInfo(nResponseData, usageLimitField) {
+            try {
+                var licensePlan = nResponseData.licensePlan || 1;
+                var durationLimit = nResponseData.durationLimit || 'Month';
                 var lstcptrRecordCount = getLSTCPTRRecordCount(durationLimit);
-
-                log.debug({ title: strDebugTitle, details: 'Usage Limit: ' + usageLimit + '; Duration Limit: ' + durationLimit });
-
+        
+                var usageLimit = 0;
+                var usageLabel = '';
+        
+                if (licensePlan == '1') { // Trial
+                    usageLimit = 100;
+                    usageLabel = `${usageLimit}/${durationLimit}`;
+                } else if (licensePlan == '2') { // Paid
+                    usageLimit = Number.MAX_SAFE_INTEGER; // Effectively unlimited
+                    usageLabel = `Unlimited/${durationLimit}`;
+                } else {
+                    // Default behavior if license plan is empty
+                    usageLimit = 100;
+                    usageLabel = `${usageLimit}/${durationLimit}`;
+                }
+        
                 usageLimitField.defaultValue = `
                     <div style="
                         border: 1px solid #ccc;
@@ -443,16 +452,20 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                         color: black;">
                         ${lstcptrRecordCount}
                         <div style="color: #7f7f82; font-size: 12px;">
-                        ${usageLimit}/${durationLimit}
+                        ${usageLabel}
                         </div>
                     </div>`;
-
+        
                 return { usageLimit, durationLimit, lstcptrRecordCount };
             } catch (err) {
-                log.error({ title: strDebugTitle + ' (displayUsageInfo) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+                log.error({
+                    title: strDebugTitle + ' (displayUsageInfo) Error',
+                    details: JSON.stringify({ code: err.name, message: err.message })
+                });
                 return { usageLimit: 0, durationLimit: '', lstcptrRecordCount: 0 };
             }
         }
+        
 
         function displayWarnings(form, clientLicenseStatus, lstcptrRecordCount, usageLimit, isExpired) 
         {
@@ -490,6 +503,7 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
 
         function setLicenseSublistValues(licenseSublist, formattedStartDate, formattedEndDate, clientLicenseStatus, licensePlan) 
         {
+            var licensePlanText = getLicensePlanText(licensePlan);
             try
             {
                 licenseSublist.setSublistValue({
@@ -515,7 +529,7 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                 licenseSublist.setSublistValue({
                     id: 'custpage_lstcptr_license_plan',
                     line: 0,
-                    value: licensePlan || ''
+                    value: licensePlanText || ''
                 });
             } catch (err) {
                 log.error({ title: strDebugTitle + ' (setLicenseSublistValues) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
@@ -558,7 +572,31 @@ define(['N/https', 'N/config', 'N/search', 'N/record', 'N/format', 'N/runtime', 
                 log.error({ title: strDebugTitle + ' (updateLicenseRecord) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
                 throw err;
             }
-        }    
+        } 
+        
+        function getLicensePlanText(licensePlanId) {
+            var debugTitle = 'getLicensePlanText';
+            try {
+                if (!licensePlanId) {
+                    log.debug(debugTitle, 'No license plan ID provided');
+                    return '';
+                }
+        
+                var result = search.lookupFields({
+                    type: 'customlist_lstcptr_license_plan',
+                    id: licensePlanId,
+                    columns: ['name']
+                });
+        
+                var planName = result.name || '';
+                log.debug(debugTitle, 'License Plan Name: ' + planName);
+                return planName;
+            } catch (e) {
+                log.error(debugTitle + ' Error', e.message);
+                return '';
+            }
+        }
+        
 
         function isValidString(value) 
         {

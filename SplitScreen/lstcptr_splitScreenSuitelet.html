@@ -176,41 +176,52 @@
         </div>
     </div>
     <script>
-        function submitForm() {
-            console.log("submitForm called");
-            var formData = new URLSearchParams();
-            formData.append("${recordIdField}", document.getElementById('${recordIdField}').value);
-            formData.append("${transactionTypeField}", document.getElementById('${transactionTypeField}').value);
-            formData.append("${subsidiaryField}", document.getElementById('${subsidiaryField}').value);
-            formData.append("${vendorField}", document.getElementById('${vendorField}').value);
-            formData.append("${amountField}", document.getElementById('${amountField}').value);
-            formData.append("${memoField}", document.getElementById('${memoField}').value);
-            console.log("Form Data:", formData.toString());
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData.toString()
-            })
-            .then(response => {
-                console.log("Response received:", response);
-                return response.text();
-            })
-            .then(text => {
-                console.log("Raw Response Text:", text);
-                var data = JSON.parse(text);
-                console.log("Parsed Data:", data);
-                if (data.success) {
-                    alert("Record saved successfully!");
-                    window.location.href = data.redirectUrl;
-                } else {
-                    alert("Error: " + data.message);
-                }
-            })
-            .catch(error => {
-                console.error("Error during form submission:", error);
-                alert("An error occurred while saving: " + error.message);
-            });
+       function submitForm() {
+    console.log("submitForm called");
+    var formData = new URLSearchParams();
+    
+    const fields = [
+        { id: '${recordIdField}', name: 'recordIdField' },
+        { id: '${transactionTypeField}', name: 'transactionTypeField' },
+        { id: '${subsidiaryField}', name: 'subsidiaryField' },
+        { id: '${vendorField}', name: 'vendorField' },
+        { id: '${amountField}', name: 'amountField' },
+        { id: '${memoField}', name: 'memoField' }
+    ];
+
+    for (const field of fields) {
+        const element = document.getElementById(field.id);
+        if (!element) {
+            console.error(`Element with ID ${field.id} not found`);
+            alert(`Error: Field ${field.name} not found in the form.`);
+            return;
         }
+        formData.append(field.id, element.value || '');
+    }
+
+    console.log("Form Data:", formData.toString());
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+    })
+    .then(response => response.text())
+    .then(text => {
+        console.log("Raw Response Text:", text);
+        var data = JSON.parse(text);
+        console.log("Parsed Data:", data);
+        if (data.success) {
+            alert("Record saved successfully!");
+            window.location.href = data.redirectUrl;
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error during form submission:", error);
+        alert("An error occurred while saving: " + error.message);
+    });
+}
 
         document.addEventListener('DOMContentLoaded', function() {
             console.log("DOM fully loaded");
