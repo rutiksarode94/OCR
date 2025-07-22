@@ -36,7 +36,8 @@ define([], () => {
         LICENSE_SL_DEBUG_TITLE: 'lstcptr_liccense_sl',
         BILL_PROCESS_REST_API_DEBUG_TITLE: 'lstcapture_bill_process_rest_api_rl',
         SPLIT_SCREEN_SUITELET_DEBUG_TITLE: 'split_screen_su',
-        SUPPORT_EMAIL:'rutik.sarode@livestrongtechnologies.com',
+        EDITABLEPDF_SPLIT_SCREEN_DEBUG_TITLE: 'lstcptr_bill_spit_screen_cs',
+        SUPPORT_EMAIL: 'rutik.sarode@livestrongtechnologies.com',
 
         // Suitelet Configuration
         AUTHORIZATION_SUITELET: {
@@ -66,7 +67,7 @@ define([], () => {
 
         // Folder IDs
         FOLDER_IDS: {
-            JSON_FILES: '8897', // Folder ID for JSON files
+            JSON_FILES: 'LSTCapture Json files', // Folder name for JSON files
             LSTCAPTURE_FILES: 'LSTCapture Files' // Folder name for file attachments
         },
 
@@ -113,9 +114,12 @@ define([], () => {
                 LOCATION: 'location',
                 ACCOUNT: 'account',
                 CURRENCY: 'currency',
-                PROCESS: 'custbody_lst_vendor_bill_process',
+                PROCESS: 'custbody_lstcptr_vendor_bill_process',
                 TRANSACTIONNUMBER: 'transactionnumber',
-                APPROVALSTATUS: 'approvalstatus'
+                APPROVALSTATUS: 'approvalstatus',
+                VENDOR: 'entity',
+                TOTALTAX: 'usertaxtotal',
+                DUEDATE: 'duedate',
             },
             SUBLISTS: {
                 EXPENSE: 'expense',
@@ -126,14 +130,22 @@ define([], () => {
                 PRICE: 'price',
                 RATE: 'rate',
                 AMOUNT: 'amount',
-                DESCRIPTION: 'description'
+                DESCRIPTION: 'description',
+                ITEM: 'item',
+                DEPARTMENT: 'department',
+                CLASS: 'class',
+                LOCATION: 'location'
             },
             EXPENSE_FIELDS: {
                 AMOUNT: 'amount',
                 MEMO: 'memo',
                 CATEGORY: 'category',
                 TAXCODE: 'taxcode',
-                IS_TAXABLE: 'istaxable'
+                IS_TAXABLE: 'istaxable',
+                ACCOUNT: 'account',
+                DEPARTMENT: 'department',
+                CLASS: 'class',
+                LOCATION: 'location'
             },
             FILE: {
                 INTERNAL_ID: 'internalid',
@@ -182,26 +194,18 @@ define([], () => {
         },
 
         // Vendor Configuration Fields
-        VENDOR_BILL_STAGING_FIELDS: {
-            BILL_NUMBER: 'custrecord_lstcptr_bill_number',
-            BILL_DATE: 'custrecord_lstcptr_bill_date',
-            TRAN_AMOUNT_INC_TAX: 'custrecord_lstcptr_tran_amount_inc_tax',
-            TRAN_TAX_AMOUNT: 'custrecord_lstcptr_tran_tax_amount',
-            VENDOR: 'custrecord_lstcptr_vendor',
-            PROCESS_STATUS: 'custrecord_lstcptr_process_status',
-            JSON_ITEM_DATA: 'custrecord_lstcptr_json_item_data',
-            PDF_FILE: 'custrecord_lstcptr_pdf_file',
-            JSON_FILE: 'custrecord_lstcptr_vb_stg_json_file',
-            JSON_FILEID: 'custrecord_lstcptr_json_fileid',
-            TRANSACTION_TYPE: 'custrecord_lstcptr_transaction_type',
-            GEN_TRANSACTION: 'custrecord_lstcptr_gen_transaction',
-            GEN_TRANSACTION_DATE: 'custrecord_lstcptr_gen_transaction_date',
-            GEN_TRAN_APP_STATUS: 'custrecord_lstcptr_gen_tran_app_status',
-            SUBSIDIARY: 'custrecord_lstcptr_subsidiary',
-            PROVIDER: 'custrecord_lstcptr_provider',
-            DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr',
-            MEMO: 'custrecord_lstcptr_memo',
-            EMAIL_BODY_HTML_TEXT: 'custrecord_lstcptr_email_body_html_text'
+        VENDOR_CONFIG_FIELDS: {
+            PARENT_VENDOR: 'custrecord_lstcptr_vendor_con_parent_ven',
+            DEPARTMENT: 'custrecord_lstcptr_vendor_con_department',
+            CLASS: 'custrecord_lstcptr_vendorr_config_class',
+            LOCATION: 'custrecord_lstcptr_vendor_con_location',
+            AP_ACCOUNT: 'custrecord_lstcptr_ap_account',
+            CURRENCY: 'custrecord_lstcptr_vendor_con_currency',
+            ITEM: 'custrecord_lstcptr_vendor_con_item',
+            TAX_CODE: 'custrecord_lstcptr_vendor_con_tax_code',
+            CATEGORY: 'custrecord_lstcptr_vendor_con_category',
+            CONFIGURED_VENDORS: 'custpage_lstcptr_vendor_configured',
+            SUBSIDIARY: 'custrecord_lstcptr_vendor_con_subsidiary'
         },
 
         // Main Configuration Fields
@@ -224,6 +228,7 @@ define([], () => {
             PROCESS_STATUS: 'custrecord_lstcptr_process_status',
             JSON_ITEM_DATA: 'custrecord_lstcptr_json_item_data',
             PDF_FILE: 'custrecord_lstcptr_pdf_file',
+            PDF_FILEID: 'custrecord_lstcptr_file_id',
             JSON_FILE: 'custrecord_lstcptr_vb_stg_json_file',
             JSON_FILEID: 'custrecord_lstcptr_json_fileid',
             TRANSACTION_TYPE: 'custrecord_lstcptr_transaction_type',
@@ -234,7 +239,8 @@ define([], () => {
             PROVIDER: 'custrecord_lstcptr_provider',
             DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr',
             MEMO: 'custrecord_lstcptr_memo',
-            EMAIL_BODY_HTML_TEXT: 'custrecord_lstcptr_email_body_html_text'
+            EMAIL_BODY_HTML_TEXT: 'custrecord_lstcptr_email_body_html_text',
+            SUB_TOTAL: 'custrecord_lstcptr_subtotal_amount'
         },
 
         // Subsidiary Configuration Fields
@@ -295,10 +301,10 @@ define([], () => {
         // Process Status Values
         PROCESS_STATUSES: {
             PROCEED: '1',
-            REJECTED: '2',
-            PENDING: '2',
-            NOT_STARTED: '4',
-            EXCLUDED_STATUSES: ['6', '7', '1'] // For getLSTCPTRRecordCount
+            NOT_STARTED: '2',
+            REJECTED: '3',
+            PENDING: '4',
+            TRANSACTION_COMPLETE: '5' // For getLSTCPTRRecordCount
         },
 
         // Record Types
@@ -308,7 +314,11 @@ define([], () => {
             MAIN_CONFIG: 'customrecord_lstcptr_main_configuration',
             SUBSIDIARY_CONFIG: 'customrecord_lstcptr_subsidiary_config',
             CLIENT_LICENSE: 'customrecord_lstcptr_client_license',
-            LICENSE_RECORD: 'customrecord_lstcptr_license'
+            LICENSE_RECORD: 'customrecord_lstcptr_license',
+            EXPENSE_CATEGORY: 'expensecategory',
+            INVENTORY_ITEM: 'item',
+            ACCOUNT: 'account',
+            VENDOR: 'VENDOR'
         },
 
         // License Plan Values

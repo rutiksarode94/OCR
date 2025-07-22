@@ -1,97 +1,201 @@
+/*********************************************************************************************
+ * Copyright © 2024, Oracle and/or its LST Counsaltacy Pvt. Ltd., All rights reserved.
+ *
+ * Name:            LSTCapture Bill To Process Split Screen CS (lstcptr_bill_spit_screen_cs.js)
+ *
+ * Version:         1.0.0   -   25-Sep-2024  -   RS.     -   Initial development (Adapted for Vendor Bill).
+ *
+ * Author:          LiveStrong Technologies
+ *
+ * Purpose:         Handle client-side logic for the LSTCapture Bill To Process Split Screen.
+ *
+ * Script:          customscript_lstcptr_bill_split_screen
+ * Deploy:          customdeploy_lstcptr_bill_split_screen
+ *
+ * Notes:           
+ *
+ * Dependencies:    ./lstcptr_constants
+ *
+ *********************************************************************************************/
 /**
- * Copyright © 2025, Oracle and/or its LST Consultancy Pvt. Ltd., All rights reserved.
- *
- * Name: LSTCapture Bill To Process Split Screen CS (lstcptr_bill_split_screen_cs.js)
- * Version: 1.2.0 - 15-July-2025 - Refactored for modularity and improved error handling
- * Author: LiveStrong Technologies
- * Purpose: Handle client-side logic for the LSTCapture Bill To Process Split Screen, including field population, PDF interaction, and validation.
- * Script: customscript_lstcptr_bill_split_screen
- * Deploy: customdeploy_lstcptr_bill_split_screen
- * Notes: Adapted for Vendor Bill with enhanced modularity and error handling.
- *
  * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @NModuleScope Public
+ * @FileName lstcptr_bill_spit_screen_cs.js
  */
 define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/record', './lstcptr_constants'],
     /**
-     * @param {Object} format - NetSuite format module
-     * @param {Object} dialog - NetSuite dialog module
-     * @param {Object} currentRecord - NetSuite currentRecord module
-     * @param {Object} log - NetSuite log module
-     * @param {Object} search - NetSuite search module
-     * @param {Object} record - NetSuite record module
-     * @param {Object} constants - LSTCPTR constants
+     * @param {format} format
+     * @param {dialog} dialog
+     * @param {currentRecord} currentRecord
+     * @param {log} log
+     * @param {search} search
      */
-    (format, dialog, currentRecord, log, search, record, constants) => {
-        const DEBUG_TITLE = constants.BILL_SPLIT_SCREEN_DEBUG_TITLE;
-
-        // State variables
-        let lastClickedFieldId = null;
+    function (format, dialog, currentRecord, log, search, record, constants) {
+        var strDebugTitle = constants.EDITABLEPDF_SPLIT_SCREEN_DEBUG_TITLE;
+        var lastClickedFieldId = null;
         let previousDates = {};
-        let currentFieldId = '';
-        let currentDate = '';
+        var currentFieldId = '';
+        var currentDate = '';
+        const DEBUG_TITLE = constants.EDITABLEPDF_SPLIT_SCREEN_DEBUG_TITLE;
 
         /**
-         * Checks if a value is valid (not null, undefined, empty, etc.).
-         * @param {*} value - Value to check
-         * @returns {boolean} True if the value is valid
+         * Function executed after page initialization
          */
-        const isValidValue = (value) => {
-            return value != null && value !== '' && value !== undefined && value !== 'undefined' && value !== 'NaN';
-        };
-
-        /**
-         * Logs an error with consistent formatting.
-         * @param {string} functionName - Name of the function where the error occurred
-         * @param {Error} err - Error object
-         */
-        const logError = (functionName, err) => {
-            log.error({
-                title: `${DEBUG_TITLE} (${functionName}) Error`,
-                details: JSON.stringify({ code: err.name, message: err.message })
-            });
-            console.error(`${functionName} Error: ${err.message}`);
-        };
-
-        /**
-         * Retrieves JSON file ID for a given record.
-         * @param {string|number} recordId - Vendor bill staging record ID
-         * @returns {string|null} File ID or null if not found
-         */
-        const getJsonFileId = (recordId) => {
+        function pageInit(context) {
             try {
-                if (!isValidValue(recordId)) {
-                    log.debug(`${DEBUG_TITLE} (getJsonFileId)`, 'No record ID provided');
-                    return null;
+                var currentRecord = context.currentRecord;
+                var url = window.location.href;
+                log.debug({ title: strDebugTitle + ' (pageInit)', details: 'Full URL: ' + url });
+                var urlParams = new URLSearchParams(url.split('?')[1]);
+                var subsidiaryId = urlParams.get('subsidiary');
+                var vendorId = urlParams.get('vendor');
+                var recordId = urlParams.get('vendorToBill');
+                log.debug({ title: strDebugTitle + ' (pageInit)', details: 'Params - Subsidiary: ' + subsidiaryId + ', Vendor: ' + vendorId + ', VendorToBill: ' + recordId });
+
+                if (vendorId) {
+                    var vendorConfig = getVendorConfig(vendorId);
+                    if (vendorConfig) {
+                        var account = vendorConfig.account;
+                        var currency = vendorConfig.currency
+                        var taxcode = vendorConfig.taxcode;
+
+                        currentRecord.setValue({ fieldId: 'entity', value: vendorId });
+                        if (account) currentRecord.setValue({ fieldId: 'account', value: account, ignoreFieldChange: true });
+                        if (currency) currentRecord.setValue({ fieldId: 'currency', value: currency });
+
+                        var item = vendorConfig.item;
+                        log.debug("Item: ", item);
+
+                        var category = vendorConfig.category;
+                        log.debug("Category: ", category);
+                    }
                 }
-                const fileSearch = search.create({
+                if (subsidiaryId) {
+                    // Step 2: Fetch location, class, and department from custom record
+                    var subsidiaryConfig = getSubsidiaryConfig(subsidiaryId);
+                    var jsonFileId = getJsonFileId(recordId);
+                    log.debug("jsonFileId", jsonFileId);
+
+                    if (subsidiaryConfig) {
+                        var location = subsidiaryConfig.location;
+                        var className = subsidiaryConfig.class;
+                        var department = subsidiaryConfig.department;
+
+                        log.debug({ title: strDebugTitle + ' (pageInit)', details: "Fetched values - Location: " + location + ", Class: " + className + ", Department: " + department });
+                    }
+                    else {
+                        log.debug({ title: strDebugTitle + ' (pageInit)', details: "No subsidiary ID found in URL" });
+                    }
+                }
+
+                setupPdfInteraction();
+                attachFieldFocusListeners();
+            } catch (err) {
+                log.error({ title: strDebugTitle + ' (pageInit) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+            }
+        }
+
+        function getJsonFileId(recordId) {
+            try {
+                var JsonFolderId = getJsonFolderId(constants.FOLDER_IDS.JSON_FILES);
+                log.debug('JsonFolderId', JsonFolderId);
+                var fileSearch = search.create({
                     type: 'file',
                     filters: [
-                        ['name', 'contains', `${recordId}.json`],
+                        ['name', 'contains', recordId + '.json'],
                         'AND',
-                        ['folder', 'is', constants.FOLDER_IDS.JSON_FILES]
+                        ['folder', 'is', JsonFolderId]
                     ],
                     columns: ['internalid', 'name']
                 });
-                const results = fileSearch.run().getRange({ start: 0, end: 1 });
-                const fileId = results.length > 0 ? results[0].getValue('internalid') : null;
-                log.debug(`${DEBUG_TITLE} (getJsonFileId)`, `File ID: ${fileId} for record ${recordId}`);
-                return fileId;
-            } catch (err) {
-                logError('getJsonFileId', err);
+
+                var result = fileSearch.run().getRange({ start: 0, end: 1 });
+
+                if (result && result.length > 0) {
+                    var fileId = result[0].getValue({ name: 'internalid' });
+                    log.debug('Found File ID', fileId);
+                    return fileId;
+                } else {
+                    log.debug('No JSON file found for record', recordId);
+                    return null;
+                }
+
+            } catch (e) {
+                log.error('Error in getJsonFileId', e);
                 return null;
             }
-        };
+        }
+
+        function getJsonFolderId(folderName) {
+            try {
+                var folderSearch = search.create({
+                    type: search.Type.FOLDER,
+                    filters: [
+                        ['name', 'is', folderName],
+                        'AND',
+                        ['isinactive', 'is', 'F']
+                    ],
+                    columns: ['internalid']
+                });
+
+                var result = folderSearch.run().getRange({ start: 0, end: 1 });
+                if (result && result.length > 0) {
+                    return result[0].getValue('internalid');
+                } else {
+                    log.debug('No folder found with name', folderName);
+                    return null;
+                }
+            }
+            catch (e) {
+                log.error('Error in getJsonFolderId', e);
+                return null;
+            }
+        }
 
         /**
-         * Retrieves vendor configuration.
-         * @param {string|number} vendorId - Vendor internal ID
-         * @returns {Object|null} Vendor configuration or null if not found
+         * Helper function to fetch subsidiary config
          */
-        const getVendorConfig = (vendorId) => {
+        function getSubsidiaryConfig(subsidiaryId) {
             try {
-                if (!isValidValue(vendorId)) {
+                if (!subsidiaryId) {
+                    log.debug(`${DEBUG_TITLE} (getSubsidiaryConfig)`, 'No subsidiary ID provided');
+                    return null;
+                }
+                const subsidiarySearch = search.create({
+                    type: constants.RECORD_TYPES.SUBSIDIARY_CONFIG,
+                    filters: [
+                        [constants.SUBSIDIARY_CONFIG_FIELDS.SUBSIDIARY, 'anyof', subsidiaryId],
+                        'AND',
+                        ['isinactive', 'is', 'F']
+                    ],
+                    columns: [
+                        constants.SUBSIDIARY_CONFIG_FIELDS.LOCATION,
+                        constants.SUBSIDIARY_CONFIG_FIELDS.CLASS,
+                        constants.SUBSIDIARY_CONFIG_FIELDS.DEPARTMENT
+                    ]
+                });
+                const result = subsidiarySearch.run().getRange({ start: 0, end: 1 });
+                const config = result.length ? {
+                    location: result[0].getValue(constants.SUBSIDIARY_CONFIG_FIELDS.LOCATION),
+                    class: result[0].getValue(constants.SUBSIDIARY_CONFIG_FIELDS.CLASS),
+                    department: result[0].getValue(constants.SUBSIDIARY_CONFIG_FIELDS.DEPARTMENT)
+                } : null;
+                log.debug({
+                    title: `${DEBUG_TITLE} (getSubsidiaryConfig)`,
+                    details: `Subsidiary ${subsidiaryId} config: ${JSON.stringify(config)}`
+                });
+                return config;
+            } catch (err) {
+                log.error('getSubsidiaryConfig', err);
+                console.error(`getSubsidiaryConfig Error: ${err.message}`);
+                return null;
+            }
+        }
+
+        function getVendorConfig(vendorId) {
+            try {
+                if (!vendorId) {
                     log.debug(`${DEBUG_TITLE} (getVendorConfig)`, 'No vendor ID provided');
                     return null;
                 }
@@ -111,266 +215,69 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                         constants.VENDOR_CONFIG_FIELDS.SUBSIDIARY
                     ]
                 });
-                const results = vendorSearch.run().getRange({ start: 0, end: 1 });
-                const config = results.length ? {
-                    account: results[0].getValue(constants.VENDOR_CONFIG_FIELDS.AP_ACCOUNT),
-                    currency: results[0].getValue(constants.VENDOR_CONFIG_FIELDS.CURRENCY),
-                    item: results[0].getValue(constants.VENDOR_CONFIG_FIELDS.ITEM),
-                    taxcode: results[0].getValue(constants.VENDOR_CONFIG_FIELDS.TAX_CODE),
-                    category: results[0].getText(constants.VENDOR_CONFIG_FIELDS.CATEGORY),
-                    subsidiary: results[0].getValue(constants.VENDOR_CONFIG_FIELDS.SUBSIDIARY)
+                const result = vendorSearch.run().getRange({ start: 0, end: 1 });
+                const config = result.length ? {
+                    account: result[0].getValue(constants.VENDOR_CONFIG_FIELDS.AP_ACCOUNT),
+                    currency: result[0].getValue(constants.VENDOR_CONFIG_FIELDS.CURRENCY),
+                    item: result[0].getValue(constants.VENDOR_CONFIG_FIELDS.ITEM),
+                    taxcode: result[0].getValue(constants.VENDOR_CONFIG_FIELDS.TAX_CODE),
+                    category: result[0].getText(constants.VENDOR_CONFIG_FIELDS.CATEGORY),
+                    subsidiary: result[0].getValue(constants.VENDOR_CONFIG_FIELDS.SUBSIDIARY)
                 } : null;
-                log.debug(`${DEBUG_TITLE} (getVendorConfig)`, `Vendor ${vendorId} config: ${JSON.stringify(config)}`);
-                return config;
-            } catch (err) {
-                logError('getVendorConfig', err);
-                return null;
-            }
-        };
-
-        /**
-         * Retrieves subsidiary configuration.
-         * @param {string|number} subsidiaryId - Subsidiary internal ID
-         * @returns {Object|null} Subsidiary configuration or null if not found
-         */
-        const getSubsidiaryConfig = (subsidiaryId) => {
-            try {
-                if (!isValidValue(subsidiaryId)) {
-                    log.debug(`${DEBUG_TITLE} (getSubsidiaryConfig)`, 'No subsidiary ID provided');
-                    return null;
-                }
-                const subsidiarySearch = search.create({
-                    type: constants.RECORD_TYPES.SUBSIDIARY_CONFIG,
-                    filters: [
-                        [constants.SUBSIDIARY_CONFIG_FIELDS.SUBSIDIARY, 'anyof', subsidiaryId],
-                        'AND',
-                        ['isinactive', 'is', 'F']
-                    ],
-                    columns: [
-                        constants.SUBSIDIARY_CONFIG_FIELDS.DEPARTMENT,
-                        constants.SUBSIDIARY_CONFIG_FIELDS.CLASS,
-                        constants.SUBSIDIARY_CONFIG_FIELDS.LOCATION
-                    ]
+                log.debug({
+                    title: `${DEBUG_TITLE} (getVendorConfig)`,
+                    details: `Vendor ${vendorId} config: ${JSON.stringify(config)}`
                 });
-                const results = subsidiarySearch.run().getRange({ start: 0, end: 1 });
-                const config = results.length ? {
-                    department: results[0].getValue(constants.SUBSIDIARY_CONFIG_FIELDS.DEPARTMENT),
-                    class: results[0].getValue(constants.SUBSIDIARY_CONFIG_FIELDS.CLASS),
-                    location: results[0].getValue(constants.SUBSIDIARY_CONFIG_FIELDS.LOCATION)
-                } : null;
-                log.debug(`${DEBUG_TITLE} (getSubsidiaryConfig)`, `Subsidiary ${subsidiaryId} config: ${JSON.stringify(config)}`);
                 return config;
             } catch (err) {
-                logError('getSubsidiaryConfig', err);
+                log.error('getVendorConfig', err);
+                console.error(`getVendorConfig Error: ${err.message}`);
                 return null;
             }
-        };
+        }
 
-        /**
-         * Initializes page by setting up field values and PDF interactions.
-         * @param {Object} context - Script context
-         */
-        const pageInit = (context) => {
-            try {
-                const rec = context.currentRecord;
-                const url = window.location.href;
-                const urlParams = new URLSearchParams(url.split('?')[1]);
-                const subsidiaryId = urlParams.get('subsidiary');
-                const vendorId = urlParams.get('vendor');
-                const recordId = urlParams.get('vendorToBill');
-                log.debug(`${DEBUG_TITLE} (pageInit)`, `Params - Subsidiary: ${subsidiaryId}, Vendor: ${vendorId}, VendorToBill: ${recordId}`);
-
-                if (vendorId) {
-                    const vendorConfig = getVendorConfig(vendorId);
-                    if (vendorConfig) {
-                        const fields = [
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.ENTITY, value: vendorId },
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.ACCOUNT, value: vendorConfig.account },
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.CURRENCY, value: vendorConfig.currency }
-                        ].filter(field => isValidValue(field.value));
-                        fields.forEach(field => {
-                            rec.setValue({ fieldId: field.id, value: field.value, ignoreFieldChange: true });
-                        });
-                        log.debug(`${DEBUG_TITLE} (pageInit)`, `Set vendor fields: ${JSON.stringify(fields)}`);
-                    }
-                }
-
-                if (subsidiaryId) {
-                    const subsidiaryConfig = getSubsidiaryConfig(subsidiaryId);
-                    if (subsidiaryConfig) {
-                        const fields = [
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.DEPARTMENT, value: subsidiaryConfig.department },
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.CLASS, value: subsidiaryConfig.class },
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.LOCATION, value: subsidiaryConfig.location }
-                        ].filter(field => isValidValue(field.value));
-                        fields.forEach(field => {
-                            rec.setValue({ fieldId: field.id, value: field.value, ignoreFieldChange: true });
-                        });
-                        log.debug(`${DEBUG_TITLE} (pageInit)`, `Set subsidiary fields: ${JSON.stringify(fields)}`);
-                    }
-                    getJsonFileId(recordId); // Log JSON file ID for debugging
-                }
-
-                setupPdfInteraction();
-                attachFieldFocusListeners();
-            } catch (err) {
-                logError('pageInit', err);
-            }
-        };
-
-        /**
-         * Handles field changes, updating sublists or clearing PDF highlights.
-         * @param {Object} context - Script context
-         */
-        const fieldChanged = (context) => {
+        function postSourcing(context) {
             try {
                 const rec = context.currentRecord;
                 const fieldId = context.fieldId;
 
-                if (fieldId === constants.STANDARD_FIELDS.VENDOR_BILL.ISTAXABLE) {
-                    log.debug(`${DEBUG_TITLE} (fieldChanged)`, 'Clearing highlights for istaxable field');
-                    clearPdfHighlights();
-                    return;
-                }
-
-                if ([
-                    constants.CUSTOM_FIELDS.VB_LINE_DEPARTMENT,
-                    constants.CUSTOM_FIELDS.VB_LINE_LOCATION,
-                    constants.CUSTOM_FIELDS.VB_LINE_CLASS
-                ].includes(fieldId)) {
-                    const lineCount = rec.getLineCount({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE });
-                    const value = rec.getValue({ fieldId });
-                    const sublistFieldMap = {
-                        [constants.CUSTOM_FIELDS.VB_LINE_DEPARTMENT]: constants.STANDARD_FIELDS.VENDOR_BILL.DEPARTMENT,
-                        [constants.CUSTOM_FIELDS.VB_LINE_LOCATION]: constants.STANDARD_FIELDS.VENDOR_BILL.LOCATION,
-                        [constants.CUSTOM_FIELDS.VB_LINE_CLASS]: constants.STANDARD_FIELDS.VENDOR_BILL.CLASS
-                    };
-                    const sublistFieldId = sublistFieldMap[fieldId];
-
-                    for (let i = 0; i < lineCount; i++) {
-                        rec.selectLine({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE, line: i });
-                        rec.setCurrentSublistValue({
-                            sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE,
-                            fieldId: sublistFieldId,
-                            value
-                        });
-                    }
-                    log.debug(`${DEBUG_TITLE} (fieldChanged)`, `Updated ${sublistFieldId} to ${value} for ${lineCount} expense lines`);
-                }
-            } catch (err) {
-                logError('fieldChanged', err);
-            }
-        };
-
-        /**
-         * Validates the record before saving.
-         * @param {Object} context - Script context
-         * @returns {boolean} True if valid, false otherwise
-         */
-        const saveRecord = (context) => {
-            try {
-                const rec = context.currentRecord;
-                const lineCount = rec.getLineCount({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE });
-                if (lineCount === -1) {
-                    log.error(`${DEBUG_TITLE} (saveRecord)`, 'Expense sublist not found');
-                    dialog.alert({
-                        title: 'Error',
-                        message: 'Expense sublist is not configured. Please contact your administrator.'
-                    });
-                    return false;
-                }
-
-                const categoryField = rec.getSublistField({
-                    sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE,
-                    fieldId: constants.STANDARD_FIELDS.EXPENSE_FIELDS.CATEGORY,
-                    line: 0
-                });
-                if (!categoryField) {
-                    log.error(`${DEBUG_TITLE} (saveRecord)`, 'Category field not found on expense sublist');
-                    dialog.alert({
-                        title: 'Error',
-                        message: 'Category field is not configured on the expense sublist. Please contact your administrator.'
-                    });
-                    return false;
-                }
-
-                for (let i = 0; i < lineCount; i++) {
-                    rec.selectLine({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE, line: i });
-                    const category = rec.getCurrentSublistValue({
-                        sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE,
-                        fieldId: constants.STANDARD_FIELDS.EXPENSE_FIELDS.CATEGORY
-                    });
-                    if (!category) {
-                        dialog.alert({
-                            title: 'Validation Error',
-                            message: `Line ${i + 1} does not have a category selected. Please complete all categories before saving.`
-                        });
-                        return false;
-                    }
-                }
-
-                return true;
-            } catch (err) {
-                logError('saveRecord', err);
-                dialog.alert({
-                    title: 'Error',
-                    message: 'An unexpected error occurred while saving the record. Please contact your administrator.'
-                });
-                return false;
-            }
-        };
-
-        /**
-         * Handles post-sourcing logic for the entity field.
-         * @param {Object} context - Script context
-         */
-        const postSourcing = (context) => {
-            try {
-                const rec = context.currentRecord;
-                const fieldId = context.fieldId;
-
-                if (fieldId === constants.STANDARD_FIELDS.VENDOR_BILL.ENTITY) {
-                    const vendorId = rec.getValue(constants.STANDARD_FIELDS.VENDOR_BILL.ENTITY);
+                if (fieldId === 'entity') {
+                    const vendorId = rec.getValue('entity');
                     if (!vendorId) {
-                        log.debug(`${DEBUG_TITLE} (postSourcing)`, 'No vendor selected, skipping');
+                        log.debug({
+                            title: `${DEBUG_TITLE} (postSourcing)`,
+                            details: 'No vendor selected, skipping'
+                        });
+                        console.log(`postSourcing: No vendor selected`);
                         return;
                     }
 
+                    // Get vendor configuration
                     const vendorConfig = getVendorConfig(vendorId);
                     const vendorLookup = vendorId ? search.lookupFields({
-                        type: search.Type.VENDOR,
+                        type: constants.RECORD_TYPES.VENDOR,
                         id: vendorId,
-                        columns: [
-                            constants.STANDARD_FIELDS.VENDOR.SUBSIDIARY,
-                            constants.STANDARD_FIELDS.VENDOR.PAYABLES_ACCOUNT,
-                            constants.STANDARD_FIELDS.VENDOR.CURRENCY
-                        ]
+                        columns: [constants.STANDARD_FIELDS.VENDOR.SUBSIDIARY,
+                        constants.STANDARD_FIELDS.VENDOR.AP_ACCOUNT,
+                        constants.STANDARD_FIELDS.VENDOR.CURRENCY]
                     }) : {};
 
-                    const subsidiaryId = vendorConfig?.subsidiary ||
-                        vendorLookup[constants.STANDARD_FIELDS.VENDOR.SUBSIDIARY]?.[0]?.value ||
-                        rec.getValue(constants.STANDARD_FIELDS.VENDOR_BILL.SUBSIDIARY);
-
+                    const subsidiaryId = vendorConfig?.subsidiary || vendorLookup.subsidiary?.[0]?.value || rec.getValue(constants.STANDARD_FIELDS.VENDOR.SUBSIDIARY);
                     if (!subsidiaryId) {
-                        log.debug(`${DEBUG_TITLE} (postSourcing)`, `No subsidiary found for vendor ${vendorId}`);
-                        dialog.alert({
-                            title: 'Configuration Missing',
-                            message: `No subsidiary found for vendor ID ${vendorId}. Please contact your administrator.`
+                        log.debug({
+                            title: `${DEBUG_TITLE} (postSourcing)`,
+                            details: `No subsidiary found for vendor ${vendorId}`
                         });
+                        console.warn(`postSourcing: No subsidiary for vendor ${vendorId}`);
                         return;
                     }
 
+                    // Set vendor-related fields
                     const vendorFields = [
-                        { id: constants.STANDARD_FIELDS.VENDOR_BILL.SUBSIDIARY, value: subsidiaryId },
-                        {
-                            id: constants.STANDARD_FIELDS.VENDOR_BILL.ACCOUNT,
-                            value: vendorConfig?.account || vendorLookup[constants.STANDARD_FIELDS.VENDOR.PAYABLES_ACCOUNT]?.[0]?.value
-                        },
-                        {
-                            id: constants.STANDARD_FIELDS.VENDOR_BILL.CURRENCY,
-                            value: vendorConfig?.currency || vendorLookup[constants.STANDARD_FIELDS.VENDOR.CURRENCY]?.[0]?.value
-                        }
-                    ].filter(field => isValidValue(field.value));
+                        { id: 'subsidiary', value: subsidiaryId },
+                        { id: 'account', value: vendorConfig?.account || vendorLookup.payablesaccount?.[0]?.value },
+                        { id: 'currency', value: vendorConfig?.currency || vendorLookup.currency?.[0]?.value }
+                    ].filter(field => field.value);
 
                     vendorFields.forEach(field => {
                         rec.setValue({
@@ -380,13 +287,14 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                         });
                     });
 
+                    // Get subsidiary configuration
                     const subsidiaryConfig = getSubsidiaryConfig(subsidiaryId);
                     if (subsidiaryConfig) {
                         const subsidiaryFields = [
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.DEPARTMENT, value: subsidiaryConfig.department },
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.CLASS, value: subsidiaryConfig.class },
-                            { id: constants.STANDARD_FIELDS.VENDOR_BILL.LOCATION, value: subsidiaryConfig.location }
-                        ].filter(field => isValidValue(field.value));
+                            { id: 'department', value: subsidiaryConfig.department },
+                            { id: 'class', value: subsidiaryConfig.class },
+                            { id: 'location', value: subsidiaryConfig.location }
+                        ].filter(field => field.value);
 
                         subsidiaryFields.forEach(field => {
                             rec.setValue({
@@ -396,347 +304,487 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                             });
                         });
                     } else {
-                        log.debug(`${DEBUG_TITLE} (postSourcing)`, `No subsidiary config found for subsidiary ${subsidiaryId}`);
+                        log.debug({
+                            title: `${DEBUG_TITLE} (postSourcing)`,
+                            details: `No subsidiary config found for subsidiary ${subsidiaryId}`
+                        });
+                        console.warn(`postSourcing: No subsidiary config for ID ${subsidiaryId}`);
                         dialog.alert({
                             title: 'Configuration Missing',
                             message: `No subsidiary configuration found for subsidiary ID ${subsidiaryId}. Please contact your administrator.`
                         });
                     }
 
-                    log.debug(`${DEBUG_TITLE} (postSourcing)`, `Set fields for vendor ${vendorId}, subsidiary ${subsidiaryId}: ${JSON.stringify({
-                        subsidiary: subsidiaryId,
-                        account: vendorFields.find(f => f.id === constants.STANDARD_FIELDS.VENDOR_BILL.ACCOUNT)?.value,
-                        currency: vendorFields.find(f => f.id === constants.STANDARD_FIELDS.VENDOR_BILL.CURRENCY)?.value,
+                    log.debug({
+                        title: `${DEBUG_TITLE} (postSourcing)`,
+                        details: `Set fields for vendor ${vendorId}, subsidiary ${subsidiaryId}: ${JSON.stringify({
+                            subsidiary: subsidiaryId,
+                            account: vendorFields.find(f => f.id === 'account')?.value,
+                            currency: vendorFields.find(f => f.id === 'currency')?.value,
+                            ...subsidiaryConfig
+                        })}`
+                    });
+                    console.log(`postSourcing: Set fields - ${JSON.stringify({
+                        vendorId,
+                        subsidiaryId,
+                        account: vendorFields.find(f => f.id === 'account')?.value,
+                        currency: vendorFields.find(f => f.id === 'currency')?.value,
                         ...subsidiaryConfig
                     })}`);
                 }
             } catch (err) {
-                logError('postSourcing', err);
+                log.error('postSourcing', err);
+                console.error(`postSourcing Error: ${err.message}`);
             }
-        };
+
+        }
+
+        function saveRecord(context) {
+            try {
+                const pdfCanvas = document.getElementById('pdfCanvas');
+                if (!pdfCanvas) {
+                    log.debug({ title: strDebugTitle + ' (saveRecord)', details: 'pdfCanvas element not found, allowing save to proceed' });
+                    return true; // Adjust based on requirements
+                }
+
+                var rec = context.currentRecord;
+                var lineCount = rec.getLineCount({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE });
+                if (lineCount === -1) {
+                    log.error({ title: strDebugTitle + ' (saveRecord)', details: 'Expense sublist not found on record' });
+                    alert('Expense sublist is not configured. Please contact your administrator.');
+                    return false;
+                }
+
+                // Verify category field exists
+                var categoryField = rec.getSublistField({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE, fieldId: constants.STANDARD_FIELDS.EXPENSE_FIELDS.CATEGORY, line: 0 });
+                if (!categoryField) {
+                    log.error({ title: strDebugTitle + ' (saveRecord)', details: 'Category field not found on expense sublist' });
+                    alert('Category field is not configured on the expense sublist. Please contact your administrator.');
+                    return false;
+                }
+
+                var missingItemLine = null;
+
+                for (var i = 0; i < lineCount; i++) {
+                    try {
+                        rec.selectLine({ sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE, line: i });
+                        var category = rec.getCurrentSublistValue({
+                            sublistId: constants.STANDARD_FIELDS.SUBLISTS.EXPENSE,
+                            fieldId: constants.STANDARD_FIELDS.EXPENSE_FIELDS.CATEGORY
+                        });
+
+                        if (!category) {
+                            missingItemLine = i + 1;
+                            break;
+                        }
+                    } catch (sublistErr) {
+                        log.error({ title: strDebugTitle + ' (saveRecord) Sublist Error', details: JSON.stringify({ code: sublistErr.name, message: sublistErr.message, line: i }) });
+                        alert('Error accessing expense line ' + (i + 1) + '. Please contact your administrator.');
+                        return false;
+                    }
+                }
+
+                if (missingItemLine) {
+                    alert('Line ' + missingItemLine + ' does not have a category selected. Please complete all categories before saving.');
+                    return false;
+                }
+
+                return true;
+
+            } catch (err) {
+                log.error({ title: strDebugTitle + ' (saveRecord) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+                alert('An unexpected error occurred while saving the record. Please contact your administrator.');
+                return false;
+            }
+        }
 
         /**
-         * Attaches focus and blur listeners to input fields.
+         * Attach focus listeners to fields
          */
-        const attachFieldFocusListeners = () => {
+        function attachFieldFocusListeners() {
             try {
-                const inputFields = document.querySelectorAll('input, textarea, select, email, hyperlink, integer, decimal, currency');
-                inputFields.forEach(field => {
-                    field.addEventListener('focus', () => {
+                var inputFields = document.querySelectorAll('input, textarea, select, email, hyperlink, integer, decimal, currency');
+                inputFields.forEach(function (field) {
+                    field.addEventListener('focus', function () {
                         lastClickedFieldId = field.id.replace('_formattedValue', '');
-                        log.debug(`${DEBUG_TITLE} (attachFieldFocusListeners)`, `Field focused: ${lastClickedFieldId}`);
-                        if (['inpt_category', 'memo', 'amount'].includes(lastClickedFieldId)) {
+                        log.debug({ title: strDebugTitle, details: "Field focused: " + lastClickedFieldId });
+                        if (lastClickedFieldId === 'inpt_category' || lastClickedFieldId === 'memo' || lastClickedFieldId === 'amount') {
                             return;
                         }
                         if (previousDates[lastClickedFieldId]) {
-                            const searchDate = previousDates[lastClickedFieldId];
-                            log.debug(`${DEBUG_TITLE} (attachFieldFocusListeners)`, `Previous date found for field: ${lastClickedFieldId} - ${searchDate}`);
+                            let searchDate = previousDates[lastClickedFieldId];
+                            log.debug({ title: strDebugTitle, details: "Previous date found for field: " + lastClickedFieldId + " - " + searchDate });
                             clearPdfHighlights();
                         }
                     });
-                    field.addEventListener('blur', () => clearPdfHighlights());
+
+                    field.addEventListener('blur', function () {
+                        clearPdfHighlights();
+                    });
                 });
-            } catch (err) {
-                logError('attachFieldFocusListeners', err);
             }
-        };
+            catch (err) {
+                log.error({ title: strDebugTitle + ' (attachFieldFocusListeners) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+            }
+        }
 
         /**
-         * Applies selected PDF text to the active field.
-         * @param {string} pdfText - Selected text from PDF
+         * Apply selected PDF text to field
          */
-        const applySelectedPdfTextToField = (pdfText) => {
+        function applySelectedPdfTextToField(pdfText) {
             try {
                 if (!lastClickedFieldId || !pdfText) {
-                    log.debug(`${DEBUG_TITLE} (applySelectedPdfTextToField)`, 'No field selected or no text to copy');
+                    log.debug({ title: strDebugTitle, details: "No field selected or no text to copy." });
                     return;
                 }
-                const rec = currentRecord.get();
-                const field = rec.getField({ fieldId: lastClickedFieldId });
+                var rec = currentRecord.get();
+                var field = rec.getField({ fieldId: lastClickedFieldId });
 
                 if (!field) {
-                    log.debug(`${DEBUG_TITLE} (applySelectedPdfTextToField)`, `Field not found: ${lastClickedFieldId}, attempting line-level`);
-                    setValueLineLevel(pdfText);
+                    log.error({ title: strDebugTitle, details: "Field not found: " + lastClickedFieldId });
+                    setValueLinelevel(pdfText);
                     return;
                 }
 
-                const fieldType = field.type;
-                let valueToSet;
+                var fieldType = field.type;
+                log.debug({ title: strDebugTitle, details: "Field type for " + lastClickedFieldId + ": " + fieldType });
 
-                if (fieldType === 'date') {
-                    valueToSet = parseDate(pdfText);
-                    if (valueToSet) {
-                        currentDate = pdfText;
-                        currentFieldId = lastClickedFieldId;
-                        previousDates[currentFieldId] = currentDate;
-                        log.debug(`${DEBUG_TITLE} (applySelectedPdfTextToField)`, `Stored date for ${currentFieldId}: ${currentDate}`);
-                    } else {
-                        log.error(`${DEBUG_TITLE} (applySelectedPdfTextToField)`, `Failed to parse date from: ${pdfText}`);
-                        return;
-                    }
-                } else {
-                    const currencySymbolsPattern = /^[\$\€\¥\£\₹\₽\₺\₩\₫\₪\₦\₱\฿\₲\₡\₭\₮\₸\Br\лв\R$\د.إд.к\.м\.р\.с\₼]+/;
-                    valueToSet = currencySymbolsPattern.test(pdfText)
-                        ? pdfText.replace(currencySymbolsPattern, '').replace(/,/g, '').trim()
-                        : pdfText.trim();
+                var valueToSet;
+
+                switch (fieldType) {
+                    case 'date':
+                        var parsedDate = parseDate(pdfText);
+                        if (parsedDate) {
+                            valueToSet = parsedDate;
+                            log.debug({ title: strDebugTitle, details: "Parsed date value: " + valueToSet + " from: " + pdfText });
+                            if (parsedDate) {
+                                currentDate = pdfText;
+                                currentFieldId = lastClickedFieldId;
+                                if (currentDate) {
+                                    previousDates[currentFieldId] = currentDate;
+                                    log.debug({ title: strDebugTitle, details: "Previous date stored for field: " + currentFieldId + " - " + currentDate });
+                                }
+                            }
+                        } else {
+                            log.error({ title: strDebugTitle, details: "Failed to parse date from: " + pdfText });
+                            return;
+                        }
+                        break;
+
+                    default:
+                        valueToSet = pdfText.trim();
                 }
 
-                setFieldValueBasedOnType(rec, lastClickedFieldId, valueToSet);
-                const fieldElement = document.getElementById(lastClickedFieldId);
-                if (fieldElement) fieldElement.focus();
-                log.debug(`${DEBUG_TITLE} (applySelectedPdfTextToField)`, `Set value for ${lastClickedFieldId}: ${valueToSet}`);
+                try {
+                    if (fieldType === 'date') {
+                        var dateObj = new Date(valueToSet);
+                        if (!isNaN(dateObj.getTime())) {
+                            rec.setValue({ fieldId: lastClickedFieldId, value: dateObj });
+                        }
+                    }
+                    else if (fieldType === 'text' || fieldType === 'textarea') {
+                        rec.setValue({ fieldId: lastClickedFieldId, value: valueToSet });
+                    }
+                    else {
+                        var currencySymbolsPattern = /^[\$\€\¥\£\₹\₽\₺\₩\₫\₪\₦\₱\฿\₲\₡\₭\₮\₸\Br\лв\R$\د.إд.к\.м\.р\.с\₼]+/;
+                        if (currencySymbolsPattern.test(pdfText)) {
+                            valueToSet = pdfText.replace(currencySymbolsPattern, '').replace(/,/g, '').trim();
+                            rec.setValue({ fieldId: lastClickedFieldId, value: valueToSet });
+                        } else {
+                            valueToSet = pdfText.trim();
+                            rec.setValue({ fieldId: lastClickedFieldId, value: valueToSet });
+                        }
+                    }
+
+                    var fieldElement = document.getElementById(lastClickedFieldId);
+                    if (fieldElement) {
+                        fieldElement.focus();
+                    }
+
+                    log.debug({ title: strDebugTitle, details: "Successfully set value for field " + lastClickedFieldId + ": " + valueToSet });
+
+                } catch (setValueError) {
+                    log.error({ title: strDebugTitle, details: "Error setting value: " + setValueError.message });
+                }
+
                 removeHighlightBoxes();
+
             } catch (err) {
-                logError('applySelectedPdfTextToField', err);
+                log.error({ title: strDebugTitle + ' (applySelectedPdfTextToField) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
 
         /**
-         * Sets value for line-level fields.
-         * @param {string} pdfText - Selected text from PDF
+         * Set value for line-level fields
          */
-        const setValueLineLevel = (pdfText) => {
+        function setValueLinelevel(pdfText) {
             try {
                 if (!lastClickedFieldId || !pdfText) {
-                    log.debug(`${DEBUG_TITLE} (setValueLineLevel)`, 'No field selected or no text to copy');
+                    log.debug({ title: strDebugTitle, details: "No field selected or no text to copy." });
                     return;
                 }
-                const rec = currentRecord.get();
-                const currencySymbolsPattern = /^[\$\€\¥\£\₹\₽\₺\₩\₫\₪\₦\₱\฿\₲\₡\₭\₮\₸\Br\лв\R$\د.إд.к\.м\.р\.с\₼]+/;
-                const valueToSet = lastClickedFieldId === 'memo'
-                    ? pdfText
-                    : currencySymbolsPattern.test(pdfText)
-                        ? pdfText.replace(currencySymbolsPattern, '').replace(/,/g, '').trim()
-                        : pdfText.trim();
+                var rec = currentRecord.get();
+                var valueToSet;
 
-                setFieldValueBasedOnType(rec, lastClickedFieldId, valueToSet);
-                const fieldElement = document.getElementById(lastClickedFieldId);
-                if (fieldElement) fieldElement.focus();
-                log.debug(`${DEBUG_TITLE} (setValueLineLevel)`, `Set value for ${lastClickedFieldId}: ${valueToSet}`);
+                try {
+                    if (lastClickedFieldId === 'memo') {
+                        valueToSet = pdfText;
+                    } else {
+                        var currencySymbolsPattern = /^[\$\€\¥\£\₹\₽\₺\₩\₫\₪\₦\₱\฿\₲\₡\₭\₮\₸\Br\лв\R$\د.إд.к\.м\.р\.с\₼]+/;
+                        if (currencySymbolsPattern.test(pdfText)) {
+                            valueToSet = pdfText.replace(currencySymbolsPattern, '').replace(/,/g, '').trim();
+                        } else {
+                            valueToSet = pdfText.trim();
+                        }
+                    }
+
+                    setFieldValueBasedOnType(rec, lastClickedFieldId, valueToSet);
+
+                    var fieldElement = document.getElementById(lastClickedFieldId);
+                    if (fieldElement) {
+                        fieldElement.focus();
+                    }
+                    log.debug({ title: strDebugTitle, details: "Successfully set value for field " + lastClickedFieldId + ": " + valueToSet });
+
+                } catch (setValueError) {
+                    log.error({ title: strDebugTitle, details: "Error setting value: " + setValueError.message });
+                }
                 removeHighlightBoxes();
+
             } catch (err) {
-                logError('setValueLineLevel', err);
+                log.error({ title: strDebugTitle + ' (setValueLinelevel) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
 
         /**
-         * Sets field value based on its type.
-         * @param {Object} rec - Current record
-         * @param {string} fieldId - Field ID
-         * @param {*} value - Value to set
+         * Set field value based on type
          */
-        const setFieldValueBasedOnType = (rec, fieldId, value) => {
+        function setFieldValueBasedOnType(rec, fieldId, value) {
             try {
-                if (isSublistField(rec, constants.STANDARD_FIELDS.SUBLISTS.EXPENSE)) {
-                    setLineFieldValue(rec, constants.STANDARD_FIELDS.SUBLISTS.EXPENSE, fieldId, value);
-                } else if (isSublistField(rec, constants.STANDARD_FIELDS.SUBLISTS.ITEM)) {
-                    setLineFieldValue(rec, constants.STANDARD_FIELDS.SUBLISTS.ITEM, fieldId, value);
+                if (isSublistField(rec, 'expense')) {
+                    setLineFieldValue(rec, 'expense', fieldId, value);
+                } else if (isSublistField(rec, 'item')) {
+                    setLineFieldValue(rec, 'item', fieldId, value);
                 } else {
+                    log.debug({ title: strDebugTitle, details: "Setting value for body field: " + fieldId });
                     setBodyFieldValue(rec, fieldId, value);
                 }
             } catch (err) {
-                logError('setFieldValueBasedOnType', err);
+                log.error({ title: strDebugTitle + ' (setFieldValueBasedOnType) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
 
         /**
-         * Checks if a field is in a sublist.
-         * @param {Object} rec - Current record
-         * @param {string} sublistId - Sublist ID
-         * @returns {boolean} True if field is in sublist
+         * Check if field is in sublist
          */
-        const isSublistField = (rec, sublistId) => {
+        function isSublistField(rec, sublistId) {
             try {
-                return rec.getCurrentSublistIndex({ sublistId }) >= 0;
+                var currentLine = rec.getCurrentSublistIndex({ sublistId: sublistId });
+                return currentLine >= 0;
             } catch (err) {
-                logError('isSublistField', err);
+                log.error({ title: strDebugTitle + ' (isSublistField) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
                 return false;
             }
-        };
+        }
 
         /**
-         * Sets body field value.
-         * @param {Object} rec - Current record
-         * @param {string} fieldId - Field ID
-         * @param {*} value - Value to set
+         * Set body field value
          */
-        const setBodyFieldValue = (rec, fieldId, value) => {
+        function setBodyFieldValue(rec, fieldId, value) {
             try {
-                const field = rec.getField({ fieldId });
-                if (field.type === 'date') {
-                    const dateObj = new Date(value);
-                    if (!isNaN(dateObj.getTime())) {
-                        rec.setValue({ fieldId, value: dateObj });
-                    }
-                } else {
-                    rec.setValue({ fieldId, value });
-                }
-                log.debug(`${DEBUG_TITLE} (setBodyFieldValue)`, `Set body field ${fieldId} to ${value}`);
+                rec.setValue({ fieldId: fieldId, value: value });
+                log.debug({ title: strDebugTitle, details: "Successfully set body field: " + fieldId + " to value: " + value });
             } catch (err) {
-                logError('setBodyFieldValue', err);
+                log.error({ title: strDebugTitle + ' (setBodyFieldValue) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
 
         /**
-         * Sets line field value.
-         * @param {Object} rec - Current record
-         * @param {string} sublistId - Sublist ID
-         * @param {string} fieldId - Field ID
-         * @param {*} value - Value to set
+         * Set line field value
          */
-        const setLineFieldValue = (rec, sublistId, fieldId, value) => {
+        function setLineFieldValue(rec, sublistId, fieldId, value) {
             try {
-                const currentLine = rec.getCurrentSublistIndex({ sublistId });
-                rec.selectLine({ sublistId, line: currentLine });
-                rec.setCurrentSublistValue({ sublistId, fieldId, value });
-                log.debug(`${DEBUG_TITLE} (setLineFieldValue)`, `Set ${sublistId} field ${fieldId} to ${value}`);
+                var currentLine = rec.getCurrentSublistIndex({ sublistId: sublistId });
+                rec.selectLine({ sublistId: sublistId, line: currentLine });
+                rec.setCurrentSublistValue({
+                    sublistId: sublistId,
+                    fieldId: fieldId,
+                    value: value
+                });
+                log.debug({ title: strDebugTitle, details: "Set line field value: " + fieldId + " to value: " + value });
             } catch (err) {
-                logError('setLineFieldValue', err);
+                log.error({ title: strDebugTitle + ' (setLineFieldValue) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
 
         /**
-         * Parses a date string into a formatted date.
-         * @param {string} dateString - Date string to parse
-         * @returns {string|null} Formatted date or null if invalid
+         * Parse date string
          */
-        const parseDate = (dateString) => {
+        function parseDate(dateString) {
             try {
-                const dateFormats = [
-                    { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, format: 'M/D/YYYY' },
-                    { regex: /^\d{1,2}\/\d{1,2}\/\d{2}$/, format: 'M/D/YY' },
-                    { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, format: 'D/M/YYYY' },
-                    { regex: /^\d{1,2}-[A-Za-z]{3}-\d{4}$/, format: 'D-Mon-YYYY' },
-                    { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, format: 'D.M.YYYY' },
-                    { regex: /^\d{1,2}-[A-Za-z]+-\d{4}$/, format: 'D-MONTH-YYYY' },
-                    { regex: /^\d{1,2} [A-Za-z]+, \d{4}$/, format: 'D MONTH, YYYY' },
-                    { regex: /^\d{4}\/\d{1,2}\/\d{1,2}$/, format: 'YYYY/M/D' },
-                    { regex: /^\d{4}-\d{1,2}-\d{1,2}$/, format: 'YYYY-M-D' },
-                    { regex: /^\d{2}\/\d{2}\/\d{4}$/, format: 'DD/MM/YYYY' },
-                    { regex: /^\d{2}-[A-Za-z]{3}-\d{4}$/, format: 'DD-Mon-YYYY' },
-                    { regex: /^\d{2}\.\d{2}\.\d{4}$/, format: 'DD.MM.YYYY' },
-                    { regex: /^\d{2}-[A-Za-z]+-\d{4}$/, format: 'DD-MONTH-YYYY' },
-                    { regex: /^\d{2} [A-Za-z]+, \d{4}$/, format: 'DD MONTH, YYYY' },
-                    { regex: /^\d{2}\/\d{2}\/\d{4}$/, format: 'MM/DD/YYYY' },
-                    { regex: /^\d{4}\/\d{2}\/\d{2}$/, format: 'YYYY/MM/DD' },
-                    { regex: /^\d{4}-\d{2}-\d{2}$/, format: 'YYYY-MM-DD' },
-                    { regex: /^\d{1,2} [A-Za-z]+ \d{4}$/, format: 'D MONTH YYYY' }
-                ];
+                var dateFormats =
+                    [
+                        { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, format: 'M/D/YYYY' },
+                        { regex: /^\d{1,2}\/\d{1,2}\/\d{2}$/, format: 'M/D/YY' },
+                        { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, format: 'D/M/YYYY' },
+                        { regex: /^\d{1,2}-[A-Za-z]{3}-\d{4}$/, format: 'D-Mon-YYYY' },
+                        { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, format: 'D.M.YYYY' },
+                        { regex: /^\d{1,2}-[A-Za-z]+-\d{4}$/, format: 'D-MONTH-YYYY' },
+                        { regex: /^\d{1,2} [A-Za-z]+, \d{4}$/, format: 'D MONTH, YYYY' },
+                        { regex: /^\d{4}\/\d{1,2}\/\d{1,2}$/, format: 'YYYY/M/D' },
+                        { regex: /^\d{4}-\d{1,2}-\d{1,2}$/, format: 'YYYY-M-D' },
+                        { regex: /^\d{2}\/\d{2}\/\d{4}$/, format: 'DD/MM/YYYY' },
+                        { regex: /^\d{2}-[A-Za-z]{3}-\d{4}$/, format: 'DD-Mon-YYYY' },
+                        { regex: /^\d{2}\.\d{2}\.\d{4}$/, format: 'DD.MM.YYYY' },
+                        { regex: /^\d{2}-[A-Za-z]+-\d{4}$/, format: 'DD-MONTH-YYYY' },
+                        { regex: /^\d{2} [A-Za-z]+, \d{4}$/, format: 'DD MONTH, YYYY' },
+                        { regex: /^\d{2}\/\d{2}\/\d{4}$/, format: 'MM/DD/YYYY' },
+                        { regex: /^\d{4}\/\d{2}\/\d{2}$/, format: 'YYYY/MM/DD' },
+                        { regex: /^\d{4}-\d{2}-\d{2}$/, format: 'YYYY-MM-DD' },
+                        { regex: /^\d{1,2} [A-Za-z]+ \d{4}$/, format: 'D MONTH YYYY' }
+                    ];
 
-                for (const { regex, format: fmt } of dateFormats) {
-                    if (regex.test(dateString)) {
-                        let parts, year, month, day;
-                        switch (fmt) {
+                for (var i = 0; i < dateFormats.length; i++) {
+                    var format = dateFormats[i];
+                    if (format.regex.test(dateString)) {
+                        var parts, year, month, day;
+
+                        switch (format.format) {
                             case 'M/D/YYYY':
                             case 'D/M/YYYY':
                             case 'MM/DD/YYYY':
                             case 'DD/MM/YYYY':
                                 parts = dateString.split('/');
-                                [month, day] = fmt.startsWith('M') || fmt.startsWith('MM') ? [parts[0], parts[1]] : [parts[1], parts[0]];
+                                if (format.format.startsWith('M') || format.format.startsWith('MM')) {
+                                    month = parts[0];
+                                    day = parts[1];
+                                } else {
+                                    day = parts[0];
+                                    month = parts[1];
+                                }
                                 year = parts[2];
                                 break;
                             case 'M/D/YY':
                                 parts = dateString.split('/');
-                                [month, day, year] = [parts[0], parts[1], '20' + parts[2]];
+                                month = parts[0];
+                                day = parts[1];
+                                year = '20' + parts[2];
                                 break;
                             case 'D-Mon-YYYY':
                             case 'DD-Mon-YYYY':
                                 parts = dateString.split('-');
-                                [day, month, year] = [parts[0], new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1, parts[2]];
+                                day = parts[0];
+                                month = new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1;
+                                year = parts[2];
                                 break;
                             case 'D.M.YYYY':
                             case 'DD.MM.YYYY':
                                 parts = dateString.split('.');
-                                [day, month, year] = parts;
+                                day = parts[0];
+                                month = parts[1];
+                                year = parts[2];
                                 break;
                             case 'D-MONTH-YYYY':
                             case 'DD-MONTH-YYYY':
                                 parts = dateString.split('-');
-                                [day, month, year] = [parts[0], new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1, parts[2]];
+                                day = parts[0];
+                                month = new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1;
+                                year = parts[2];
                                 break;
                             case 'D MONTH, YYYY':
                             case 'DD MONTH, YYYY':
                                 parts = dateString.split(' ');
-                                [day, month, year] = [parts[0], new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1, parts[2].replace(',', '')];
+                                day = parts[0];
+                                month = new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1;
+                                year = parts[2].replace(',', '');
                                 break;
                             case 'YYYY/M/D':
                             case 'YYYY/MM/DD':
                             case 'YYYY-M-D':
                             case 'YYYY-MM-DD':
                                 parts = dateString.split(/[-\/]/);
-                                [year, month, day] = fmt.endsWith('D') ? [parts[0], parts[1], parts[2]] : [parts[0], parts[2], parts[1]];
+                                year = parts[0];
+                                if (format.format.endsWith('D')) {
+                                    month = parts[1];
+                                    day = parts[2];
+                                } else {
+                                    day = parts[1];
+                                    month = parts[2];
+                                }
                                 break;
                             case 'D MONTH YYYY':
                                 parts = dateString.split(' ');
-                                [day, month, year] = [parts[0], new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1, parts[2]];
+                                day = parts[0];
+                                month = new Date(Date.parse(parts[1] + " 1, 2012")).getMonth() + 1;
+                                year = parts[2];
                                 break;
                         }
-                        const date = new Date(year, month - 1, day);
+
+                        var date = new Date(year, month - 1, day);
                         if (!isNaN(date.getTime())) {
-                            return format.format({ value: date, type: format.Type.DATE });
+                            return formatDate(date);
                         }
                     }
                 }
                 return null;
             } catch (err) {
-                logError('parseDate', err);
-                return null;
+                log.error({ title: strDebugTitle + ' (parseDate) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
+
 
         /**
-         * Removes highlight boxes from the PDF.
+         * Format date based on company preference
          */
-        const removeHighlightBoxes = () => {
+        function formatDate(date) {
             try {
-                document.querySelectorAll('.highlight-box').forEach(box => box.remove());
+                return format.format({
+                    value: date,
+                    type: format.Type.DATE
+                });
             } catch (err) {
-                logError('removeHighlightBoxes', err);
+                log.error({ title: strDebugTitle + ' (formatDate) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
 
         /**
-         * Clears PDF highlights and search input.
+         * Remove highlight boxes from PDF
          */
-        const clearPdfHighlights = () => {
+        function removeHighlightBoxes() {
             try {
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input'));
-                }
+                const highlightBoxes = document.querySelectorAll('.highlight-box');
+                highlightBoxes.forEach(box => box.remove());
             } catch (err) {
-                logError('clearPdfHighlights', err);
+                log.error({ title: strDebugTitle + ' (removeHighlightBoxes) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
-
+        }
         /**
-         * Sets up PDF interaction for text selection.
+         * Setup PDF interaction
          */
-        const setupPdfInteraction = () => {
+        function setupPdfInteraction() {
             try {
                 const pdfCanvas = document.getElementById('pdfCanvas');
+                if (!pdfCanvas) return;
                 const selectionBox = document.getElementById('selectionBox');
-                if (!pdfCanvas || !selectionBox) {
-                    log.debug(`${DEBUG_TITLE} (setupPdfInteraction)`, 'pdfCanvas or selectionBox not found');
-                    return;
-                }
+                if (!selectionBox) return;
 
                 let isMouseDown = false;
                 let startX, startY;
 
-                pdfCanvas.addEventListener('click', () => {
+                pdfCanvas.addEventListener('click', function () {
                     clearPdfHighlights();
-                    if (window.lastHoveredItem) {
-                        applySelectedPdfTextToField(window.lastHoveredItem.str);
+                    if (lastHoveredItem) {
+                        var capturedText = lastHoveredItem.str;
+                        applySelectedPdfTextToField(capturedText);
                     }
                 });
 
-                pdfCanvas.addEventListener('mousedown', (e) => {
+                pdfCanvas.addEventListener('mousedown', function (e) {
                     const rect = pdfCanvas.getBoundingClientRect();
                     startX = e.clientX - rect.left;
                     startY = e.clientY - rect.top;
                     isMouseDown = true;
+
                     selectionBox.style.left = `${startX}px`;
                     selectionBox.style.top = `${startY}px`;
                     selectionBox.style.width = `0px`;
@@ -744,8 +792,9 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                     selectionBox.style.display = 'block';
                 });
 
-                pdfCanvas.addEventListener('mousemove', (e) => {
+                pdfCanvas.addEventListener('mousemove', function (e) {
                     if (!isMouseDown) return;
+
                     const rect = pdfCanvas.getBoundingClientRect();
                     const endX = e.clientX - rect.left;
                     const endY = e.clientY - rect.top;
@@ -753,24 +802,26 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                     const height = Math.abs(endY - startY);
                     selectionBox.style.width = `${width}px`;
                     selectionBox.style.height = `${height}px`;
-                    if (endX < startX) selectionBox.style.left = `${endX}px`;
-                    if (endY < startY) selectionBox.style.top = `${endY}px`;
+
+                    if (endX < startX) {
+                        selectionBox.style.left = `${endX}px`;
+                    }
+                    if (endY < startY) {
+                        selectionBox.style.top = `${endY}px`;
+                    }
                 });
 
-                pdfCanvas.addEventListener('mouseup', async (e) => {
+                pdfCanvas.addEventListener('mouseup', async function (e) {
                     isMouseDown = false;
                     selectionBox.style.display = 'none';
+
                     const dragDistanceX = Math.abs(e.clientX - (startX + pdfCanvas.getBoundingClientRect().left));
                     const dragDistanceY = Math.abs(e.clientY - (startY + pdfCanvas.getBoundingClientRect().top));
+
                     if (dragDistanceX > 5 || dragDistanceY > 5) {
-                        const selectedText = await captureSelectedText(
-                            startX,
-                            startY,
-                            e.clientX - pdfCanvas.getBoundingClientRect().left,
-                            e.clientY - pdfCanvas.getBoundingClientRect().top
-                        );
+                        const selectedText = await captureSelectedText(startX, startY, e.clientX - pdfCanvas.getBoundingClientRect().left, e.clientY - pdfCanvas.getBoundingClientRect().top);
                         if (selectedText.length > 0) {
-                            log.debug(`${DEBUG_TITLE} (setupPdfInteraction)`, `Selected Text: ${selectedText.join('\n')}`);
+                            log.debug({ title: strDebugTitle, details: 'Selected Text: ' + selectedText.join('\n') });
                             applySelectedPdfTextToField(selectedText.join('\n'));
                         }
                     }
@@ -782,17 +833,21 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                     const maxX = Math.max(x1, x2);
                     const minY = Math.min(y1, y2);
                     const maxY = Math.max(y1, y2);
+
                     const lines = {};
 
-                    for (let item of window.pdfTextContent || []) {
-                        const left = item.transform[4] * window.pdfPageViewport?.scale;
-                        const top = window.pdfPageViewport?.height - (item.transform[5] * window.pdfPageViewport?.scale);
-                        const width = item.width * window.pdfPageViewport?.scale;
-                        const height = item.height * window.pdfPageViewport?.scale;
+                    for (let item of pdfTextContent) {
+                        const left = item.transform[4] * pdfPageViewport.scale;
+                        const top = pdfPageViewport.height - (item.transform[5] * pdfPageViewport.scale);
+                        const width = item.width * pdfPageViewport.scale;
+                        const height = item.height * pdfPageViewport.scale;
 
                         if (left + width >= minX && left <= maxX && top >= minY && top - height <= maxY) {
                             const lineY = Math.floor(top);
-                            if (!lines[lineY]) lines[lineY] = [];
+                            if (!lines[lineY]) {
+                                lines[lineY] = [];
+                            }
+
                             let charLeft = left;
                             const charWidth = width / item.str.length;
 
@@ -811,17 +866,33 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
                         lines[line].sort((a, b) => a.x - b.x);
                         selectedText.push(lines[line].map(item => item.text).join(''));
                     }
+
                     return selectedText;
                 }
             } catch (err) {
-                logError('setupPdfInteraction', err);
+                log.error({ title: strDebugTitle + ' (setupPdfInteraction) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
             }
-        };
+        }
+
+        /**
+         * Clear PDF highlights
+         */
+        function clearPdfHighlights() {
+            try {
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+            } catch (err) {
+                log.error({ title: strDebugTitle + ' (clearPdfHighlights) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+            }
+        }
 
         return {
-            pageInit,
-            fieldChanged,
-            saveRecord,
-            postSourcing
+            pageInit: pageInit,
+            //fieldChanged: fieldChanged,
+            saveRecord: saveRecord,
+            postSourcing: postSourcing
         };
     });

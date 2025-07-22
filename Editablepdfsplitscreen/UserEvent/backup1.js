@@ -193,7 +193,7 @@ define(['N/file', 'N/search', 'N/record', 'N/runtime', 'N/ui/serverWidget'],
                         objRecord.setValue({ fieldId: 'location', value: location });
                         objRecord.setValue({ fieldId: 'account', value: apAccount });
                         objRecord.setValue({ fieldId: 'currency', value: currency });
-                        objRecord.setValue({ fieldId: 'custbody_lst_vendor_bill_process', value: vendorToBill });
+                        objRecord.setValue({ fieldId: 'custbody_lstcptr_vendor_bill_process', value: vendorToBill });
 
                         var lstCaptureRecord = record.load({
                             type: 'customrecord_lstcptr_vendor_bill_process',

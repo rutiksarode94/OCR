@@ -1,0 +1,8 @@
+<manifest projecttype ="SUITEAPP">
+<publisherid>com.oracle</publisherid>
+<projectid>mycoolapp</projectid>
+<projectname>My Cool App</projectname>
+<projectversion>1.0.0</projectversion>
+<frameworkversion>1.0</frameworkversion>
+<manifest>
+ 

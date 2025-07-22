@@ -115,7 +115,7 @@ define(['N/ui/serverWidget', 'N/runtime', 'N/file', 'N/record', './lstcptr_manua
                         log.debug("Record Created Successfully", recordId);
                         recordIds.push(recordId);
 
-                        uploadedFile.folder = CONSTANTS.FOLDER_IDS.JSON_FILES;
+                        uploadedFile.folder = utils.getFolderID(CONSTANTS.FOLDER_IDS.LSTCAPTURE_FILES);
                         let fileId = uploadedFile.save();
                         log.debug("File saved to file cabinet", `File ID: ${fileId}, Name: ${uploadedFile.name}`);
 
@@ -125,8 +125,8 @@ define(['N/ui/serverWidget', 'N/runtime', 'N/file', 'N/record', './lstcptr_manua
 
                         let updatedRecord = record.load({ type: CONSTANTS.RECORD_TYPES.VENDOR_BILL_STAGING, id: recordId });
                         updatedRecord.setValue({ fieldId: CONSTANTS.VENDOR_BILL_STAGING_FIELDS.PDF_FILE, value: fileId });
-                        updatedRecord.setValue({ fieldId: CONSTANTS.VENDOR_BILL_STAGING_FIELDS.JSON_FILEID, value: fileId });
                         updatedRecord.setValue({ fieldId: CONSTANTS.CUSTOM_FIELDS.FILE_URL, value: fileUrl || '' });
+                         updatedRecord.setValue({ fieldId: CONSTANTS.VENDOR_BILL_STAGING_FIELDS.PDF_FILEID, value: fileId || '' });
                         updatedRecord.save();
                         log.debug("Record Updated with File ID and URL", `Record ID: ${recordId}, File ID: ${fileId}`);
 

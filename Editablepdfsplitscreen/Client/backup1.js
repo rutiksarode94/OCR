@@ -310,58 +310,58 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
             }
         }
 
-        /**
-         * Function executed when a field changes
-         */
-        function fieldChanged(context) {
-            try {
-                const pdfCanvas = document.getElementById('pdfCanvas');
-                if (!pdfCanvas) return;
-                var fieldId = context.fieldId;
-                var rec = context.currentRecord;
+        // /**
+        //  * Function executed when a field changes
+        //  */
+        // function fieldChanged(context) {
+        //     try {
+        //         const pdfCanvas = document.getElementById('pdfCanvas');
+        //         if (!pdfCanvas) return;
+        //         var fieldId = context.fieldId;
+        //         var rec = context.currentRecord;
 
-                if (fieldId === 'istaxable') {
-                    log.debug({ title: strDebugTitle, details: "Clearing highlights for istaxable field" });
-                    clearPdfHighlights();
-                    return;
-                }
+        //         if (fieldId === 'istaxable') {
+        //             log.debug({ title: strDebugTitle, details: "Clearing highlights for istaxable field" });
+        //             clearPdfHighlights();
+        //             return;
+        //         }
 
-                if (fieldId === 'custbody_lstcptr_vb_line_dep' || fieldId === 'custbody_lstcptr_vb_line_loc' || fieldId === 'custbody_lstcptr_vb_line_class') {
-                    var lineCount = rec.getLineCount({ sublistId: 'expense' });
-                    var value = rec.getValue({ fieldId: fieldId });
+        //         if (fieldId === 'custbody_lstcptr_vb_line_dep' || fieldId === 'custbody_lstcptr_vb_line_loc' || fieldId === 'custbody_lstcptr_vb_line_class') {
+        //             var lineCount = rec.getLineCount({ sublistId: 'expense' });
+        //             var value = rec.getValue({ fieldId: fieldId });
 
-                    for (var i = 0; i < lineCount; i++) {
-                        rec.selectLine({ sublistId: 'expense', line: i });
+        //             for (var i = 0; i < lineCount; i++) {
+        //                 rec.selectLine({ sublistId: 'expense', line: i });
 
-                        if (fieldId === 'custbody_lstcptr_vb_line_dep') {
-                            rec.setCurrentSublistValue({
-                                sublistId: 'expense',
-                                fieldId: 'department',
-                                value: value
-                            });
-                        }
-                        else if (fieldId === 'custbody_lstcptr_vb_line_loc') {
-                            rec.setCurrentSublistValue({
-                                sublistId: 'expense',
-                                fieldId: 'location',
-                                value: value
-                            });
-                        }
-                        else if (fieldId === 'custbody_lstcptr_vb_line_class') {
-                            rec.setCurrentSublistValue({
-                                sublistId: 'expense',
-                                fieldId: 'class',
-                                value: value
-                            });
-                        }
+        //                 if (fieldId === 'custbody_lstcptr_vb_line_dep') {
+        //                     rec.setCurrentSublistValue({
+        //                         sublistId: 'expense',
+        //                         fieldId: 'department',
+        //                         value: value
+        //                     });
+        //                 }
+        //                 else if (fieldId === 'custbody_lstcptr_vb_line_loc') {
+        //                     rec.setCurrentSublistValue({
+        //                         sublistId: 'expense',
+        //                         fieldId: 'location',
+        //                         value: value
+        //                     });
+        //                 }
+        //                 else if (fieldId === 'custbody_lstcptr_vb_line_class') {
+        //                     rec.setCurrentSublistValue({
+        //                         sublistId: 'expense',
+        //                         fieldId: 'class',
+        //                         value: value
+        //                     });
+        //                 }
 
-                        //  rec.commitLine({ sublistId: 'expense' });
-                    }
-                }
-            } catch (err) {
-                log.error({ title: strDebugTitle + ' (fieldChanged) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
-            }
-        }
+        //                 //  rec.commitLine({ sublistId: 'expense' });
+        //             }
+        //         }
+        //     } catch (err) {
+        //         log.error({ title: strDebugTitle + ' (fieldChanged) Error', details: JSON.stringify({ code: err.name, message: err.message }) });
+        //     }
+        // }
 
         function saveRecord(context) {
             try {
@@ -915,7 +915,7 @@ define(['N/format', 'N/ui/dialog', 'N/currentRecord', 'N/log', 'N/search', 'N/re
 
         return {
             pageInit: pageInit,
-            fieldChanged: fieldChanged,
+            //fieldChanged: fieldChanged,
             saveRecord: saveRecord,
             postSourcing: postSourcing
         };

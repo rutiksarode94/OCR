@@ -17,6 +17,34 @@
 define(['N/search', 'N/https', 'N/encode', './lstcptr_constants'], function (search, https, encode, CONSTANTS) {
     var strDebugTitle = CONSTANTS.DEBUG_TITLE;
 
+    function getFolderID(folderName) {
+        try {
+            var folderSearch = search.create({
+                type: search.Type.FOLDER,
+                filters: [
+                    ['name', 'is', folderName]
+                ],
+                columns: [
+                    search.createColumn({ name: 'internalid' })
+                ]
+            });
+
+            var searchResult = folderSearch.run().getRange({ start: 0, end: 1 });
+
+            if (searchResult.length > 0) {
+                var folderId = searchResult[0].getValue({ name: 'internalid' });
+                log.debug({ title: strDebugTitle + ' (getFolderID)', details: 'Folder ID found: ' + folderId });
+                return folderId;
+            } else {
+                log.error({ title: strDebugTitle + ' (getFolderID) Error', details: 'Folder not found with name: ' + folderName });
+                return null;
+            }
+        } catch (error) {
+            log.error({ title: strDebugTitle + ' (getFolderID) Error', details: JSON.stringify({ code: error.name, message: error.message }) });
+            return null;
+        }
+    }
+
     function getAuthenticationToken(apiKey) {
         try {
             return encode.convert({
@@ -215,6 +243,7 @@ define(['N/search', 'N/https', 'N/encode', './lstcptr_constants'], function (sea
     }
 
     return {
+        getFolderID: getFolderID,
         getAuthenticationToken: getAuthenticationToken,
         getSubsidiaryOptions: getSubsidiaryOptions,
         getAllVendors: getAllVendors,

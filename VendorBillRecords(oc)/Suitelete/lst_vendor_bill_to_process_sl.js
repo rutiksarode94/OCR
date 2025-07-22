@@ -1,7 +1,7 @@
 /*********************************************************************************************
 * Copyright © 2025, Oracle and/or its LST Counsaltacy Pvt. Ltd., All rights reserved.
 *
-* Name:            Vendor Bill To Process Records (lst_vendor_bill_to_process.js)
+* Name:            Vendor Bill To Process Records (lstcptr_vendor_bill_to_process.js)
 *
 * Version:         1.0.0   -   12-March-2025 -  RS      Initial Development.
 *
@@ -17,7 +17,7 @@
  * @NApiVersion 2.1
  * @NScriptType Suitelet
  * @NModuleScope Public
- * @FileName lst_vendor_bill_to_process.js
+ * @FileName lstcptr_vendor_bill_to_process.js
  */
 define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverWidget', 'N/redirect', './LST Capture/lstcptr_constants'], 
 (file, search, record, render, runtime, serverWidget, redirect, constants) => {
@@ -123,7 +123,11 @@ define(['N/file', 'N/search', 'N/record', 'N/render', 'N/runtime', 'N/ui/serverW
             log.debug({ title: `${strDebugTitle} - getVendorBillRecords`, details: 'Fetching vendor bill records' });
             const vendorBillSearch = search.create({
                 type: constants.RECORD_TYPES.VENDOR_BILL_STAGING,
-                filters: [['isinactive', 'is', 'F']],
+                filters: [
+                    ['isinactive', 'is', 'F'],
+                    'AND',
+                    [constants.VENDOR_BILL_STAGING_FIELDS.PROCESS_STATUS, 'noneof', constants.PROCESS_STATUSES.TRANSACTION_COMPLETE],
+                ],
                 columns: [
                     { name: constants.STANDARD_FIELDS.FILE.INTERNAL_ID },
                     { name: 'created' },

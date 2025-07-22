@@ -180,24 +180,17 @@ define([], () => {
         },
 
         // Vendor Configuration Fields
-        VENDOR_BILL_STAGING_FIELDS: {
-            BILL_NUMBER: 'custrecord_lstcptr_bill_number',
-            BILL_DATE: 'custrecord_lstcptr_bill_date',
-            TRAN_AMOUNT_INC_TAX: 'custrecord_lstcptr_tran_amount_inc_tax',
-            TRAN_TAX_AMOUNT: 'custrecord_lstcptr_tran_tax_amount',
-            VENDOR: 'custrecord_lstcptr_vendor',
-            PROCESS_STATUS: 'custrecord_lstcptr_process_status',
-            JSON_ITEM_DATA: 'custrecord_lstcptr_json_item_data',
-            PDF_FILE: 'custrecord_lstcptr_pdf_file',
-            JSON_FILE: 'custrecord_lstcptr_vb_stg_json_file',
-            JSON_FILEID: 'custrecord_lstcptr_json_fileid',
-            TRANSACTION_TYPE: 'custrecord_lstcptr_transaction_type',
-            GEN_TRANSACTION: 'custrecord_lstcptr_gen_transaction',
-            GEN_TRANSACTION_DATE: 'custrecord_lstcptr_gen_transaction_date',
-            GEN_TRAN_APP_STATUS: 'custrecord_lstcptr_gen_tran_app_status',
-            SUBSIDIARY: 'custrecord_lstcptr_subsidiary',
-            PROVIDER: 'custrecord_lstcptr_provider',
-            DATE_SENT_TO_OCR: 'custrecord_lstcptr_date_sent_to_ocr'
+        VENDOR_CONFIG_FIELDS: {
+            PARENT_VENDOR: 'custrecord_lstcptr_vendor_con_parent_ven',
+            DEPARTMENT: 'custrecord_lstcptr_vendor_con_department',
+            CLASS: 'custrecord_lstcptr_vendorr_config_class',
+            LOCATION: 'custrecord_lstcptr_vendor_con_location',
+            AP_ACCOUNT: 'custrecord_lstcptr_ap_account',
+            CURRENCY: 'custrecord_lstcptr_vendor_con_currency',
+            ITEM: 'custrecord_lstcptr_vendor_con_item',
+            TAX_CODE: 'custrecord_lstcptr_vendor_con_tax_code',
+            CATEGORY: 'custrecord_lstcptr_vendor_con_category',
+            CONFIGURED_VENDORS: 'custpage_lstcptr_vendor_configured'
         },
 
         // Main Configuration Fields

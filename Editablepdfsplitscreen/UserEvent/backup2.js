@@ -3,7 +3,7 @@
  *
  * Name:            LSTCapture Bill To Process Split Screen UE (lstcptr_bill_split_screen_ue.js)
  *
- * Version:         1.0.0   -   21-Jul-2025  -   RS            -   Initial development (Adapted for Vendor Bill).
+ * Version:         1.0.4   -   21-Jul-2025  -   Fixed error in setLineItems for missing record ID
  *
  * Author:          LiveStrong Technologies
  *
@@ -14,7 +14,7 @@
  *
  * Notes:           Updated to fix error in setLineItems caused by missing record ID. Added validation for vendorBillRecord and ensured dynamic mode. Retains JSON retrieval, line item setting, and staging record updates.
  *
- * Dependencies:    ./lstcptr_constants
+ * Dependencies:
  *
  * Libraries:
  *************************************************************************************/
@@ -537,7 +537,7 @@ define(['N/file', 'N/search', 'N/record', 'N/runtime', 'N/ui/serverWidget', './l
          * @returns {string} HTML content
          */
         const generateFileViewerHTML = (fileUrl, fileType, fileExtension, supportedTypes, accountId) => {
-            return `
+              return `
                         <html lang="en">
                         <head>
                             <meta charset="UTF-8" />

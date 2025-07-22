@@ -223,7 +223,7 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
                         log.debug({ title: `${strDebugTitle} - Record`, details: "Bill number not provided, keeping existing value." });
                     }
 
-                    recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.JSON_ITEM_DATA, JSON.stringify(requestBody.items));
+                    // recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.JSON_ITEM_DATA, JSON.stringify(requestBody.items));
                     log.debug({ title: `${strDebugTitle} - Record`, details: `Set JSON item data` });
                 } else {
                     log.debug({ title: `${strDebugTitle} - Items`, details: 'No items provided in request' });
@@ -235,10 +235,10 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
 
                 // Handle file attachments after saving the record
                 if (Array.isArray(requestBody.originalfile) && requestBody.originalfile.length > 0) {
-                    const folderId = getFileFolderID(constants.FOLDER_IDS.LSTCAPTURE_FILES);
-                    log.debug({ title: `${strDebugTitle} - File`, details: `Folder ID: ${folderId}` });
+                    const FileFolderId = getFileFolderID(constants.FOLDER_IDS.LSTCAPTURE_FILES);
+                    log.debug({ title: `${strDebugTitle} - File`, details: `Folder ID: ${FileFolderId}` });
 
-                    if (isValidString(folderId)) {
+                    if (isValidString(FileFolderId)) {
                         const fileData = requestBody.originalfile[0];
                         const fileExt = fileData.filename.split('.').pop().toLowerCase();
                         const fileType = constants.FILE_VIEWER.SUPPORTED_UPLOAD_EXTENSIONS.includes(fileExt) ? file.Type.PDF : file.Type.PDF; // Default to PDF
@@ -257,11 +257,13 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
                             name: fileData.filename,
                             fileType: fileType,
                             contents: contents,
-                            folder: Number(folderId)
+                            folder: Number(FileFolderId)
                         });
 
                         attachedFileId = fileObj.save();
                         log.debug({ title: `${strDebugTitle} - File`, details: `Saved File ID: ${attachedFileId}` });
+                        const jsonFileFolderId = getFileFolderID(constants.FOLDER_IDS.JSON_FILES);
+                        log.debug({ title: `${strDebugTitle} - File`, details: `JSON Folder ID: ${jsonFileFolderId}` });
 
                         if (isValidString(attachedFileId)) {
                             record.attach({
@@ -271,34 +273,34 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
                             });
                             log.debug({ title: `${strDebugTitle} - File Attachment`, details: `File ${attachedFileId} attached to record ${recordId}` });
 
-                            recordObj = record.load({
-                                type: constants.RECORD_TYPES.VENDOR_BILL_STAGING,
-                                id: recordId,
-                                isDynamic: false
+                            const jsonFileName = fileData.filename.split('.')[0] + "_req.json";
+                            const jsonFile = file.create({
+                                name: jsonFileName,
+                                fileType: file.Type.JSON,
+                                contents: JSON.stringify(requestBody),
+                                folder: Number(jsonFileFolderId)
                             });
-                            recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILE, attachedFileId);
-                            recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.JSON_FILEID, attachedFileId);
-                            log.debug({ title: `${strDebugTitle} - Record`, details: `File ${attachedFileId} set to ${constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILE} and ${constants.VENDOR_BILL_STAGING_FIELDS.JSON_FILEID}` });
-                            recordObj.save();
-                        }
+                            jsonFileId = jsonFile.save();
+                            log.debug({ title: `${strDebugTitle} - File`, details: `Saved JSON File ID: ${jsonFileId}` });
 
-                        const jsonFileName = fileData.filename.split('.')[0] + "_req.json";
-                        const jsonFile = file.create({
-                            name: jsonFileName,
-                            fileType: file.Type.JSON,
-                            contents: JSON.stringify(requestBody),
-                            folder: Number(folderId)
-                        });
-                        jsonFileId = jsonFile.save();
-                        log.debug({ title: `${strDebugTitle} - File`, details: `Saved JSON File ID: ${jsonFileId}` });
-
-                        if (isValidString(jsonFileId)) {
-                            record.attach({
-                                record: { type: 'file', id: jsonFileId },
-                                to: { type: constants.RECORD_TYPES.VENDOR_BILL_STAGING, id: recordId },
-                                role: 'file'
-                            });
-                            log.debug({ title: `${strDebugTitle} - File Attachment`, details: `JSON File ${jsonFileId} attached to record ${recordId}` });
+                            if (isValidString(jsonFileId)) {
+                                recordObj = record.load({
+                                    type: constants.RECORD_TYPES.VENDOR_BILL_STAGING,
+                                    id: recordId,
+                                    isDynamic: false
+                                });
+                                recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.JSON_FILEID, jsonFileId);
+                                recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILE, attachedFileId);
+                                recordObj.setValue(constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILEID, attachedFileId);
+                                log.debug({ title: `${strDebugTitle} - Record`, details: `File ${attachedFileId} set to ${constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILE} and ${constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILEID}` });
+                                recordObj.save();
+                                record.attach({
+                                    record: { type: 'file', id: jsonFileId },
+                                    to: { type: constants.RECORD_TYPES.VENDOR_BILL_STAGING, id: recordId },
+                                    role: 'file'
+                                });
+                                log.debug({ title: `${strDebugTitle} - File Attachment`, details: `JSON File ${jsonFileId} attached to record ${recordId}` });
+                            }
                         }
                     } else {
                         log.error({ title: `${strDebugTitle} - File`, details: 'Failed to get or create folder' });
@@ -316,24 +318,26 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
 
         const searchExistingRecord = (fileName, nanonetsUpdatedAt, billNumber) => {
             try {
-                log.debug({
+                log.audit({
                     title: `${strDebugTitle} - Record Search`,
                     details: `Searching for record with file name: ${fileName}, nanonets_updated_at: ${nanonetsUpdatedAt}, process_status: ${constants.PROCESS_STATUSES.PENDING} or ${constants.PROCESS_STATUSES.NOT_STARTED}, billNumber: ${billNumber}`
                 });
+                var fileId = getFileId(fileName);
+                log.debug("File Id: ", fileId);
 
                 let filters = [
-                    [constants.STANDARD_FIELDS.FILE.NAME, "is", fileName],
+                    [constants.VENDOR_BILL_STAGING_FIELDS.PDF_FILE, "is", fileId],
                     "AND",
                     ["isinactive", "is", "F"],
                     "AND",
-                    [constants.VENDOR_BILL_STAGING_FIELDS.PROCESS_STATUS, "anyof", [constants.PROCESS_STATUSES.PENDING, constants.PROCESS_STATUSES.NOT_STARTED]]
+                    [constants.VENDOR_BILL_STAGING_FIELDS.PROCESS_STATUS, "noneof", [constants.PROCESS_STATUSES.TRANSACTION_COMPLETE]]
                 ];
 
-                if (isValidString(nanonetsUpdatedAt)) {
-                    const updatedAtDate = new Date(nanonetsUpdatedAt.split("T")[0]);
-                    filters.push("AND");
-                    filters.push(["created", "on", updatedAtDate]);
-                }
+                // if (isValidString(nanonetsUpdatedAt)) {
+                //     const updatedAtDate = new Date(nanonetsUpdatedAt.split("T")[0]);
+                //     filters.push("AND");
+                //     filters.push(["created", "on", updatedAtDate]);
+                // }
 
                 const searchResults = search.create({
                     type: constants.RECORD_TYPES.VENDOR_BILL_STAGING,
@@ -344,10 +348,10 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
                         "lastmodified",
                         constants.VENDOR_BILL_STAGING_FIELDS.PROCESS_STATUS,
                         constants.VENDOR_BILL_STAGING_FIELDS.BILL_NUMBER,
-                        search.createColumn({
-                            name: constants.STANDARD_FIELDS.FILE.NAME,
-                            join: "file"
-                        })
+                        // search.createColumn({
+                        //     name: constants.STANDARD_FIELDS.FILE.NAME,
+                        //     join: "file"
+                        // })
                     ]
                 }).run().getRange({ start: 0, end: 1000 });
 
@@ -369,15 +373,15 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
                 });
 
                 if (searchResults.length > 1) {
-                    const statusNotStartedRecords = searchResults.filter(result =>
-                        result.getValue(constants.VENDOR_BILL_STAGING_FIELDS.PROCESS_STATUS) === constants.PROCESS_STATUSES.NOT_STARTED
-                    );
+                    // const statusNotStartedRecords = searchResults.filter(result =>
+                    //     result.getValue(constants.VENDOR_BILL_STAGING_FIELDS.PROCESS_STATUS) === constants.PROCESS_STATUSES.NOT_STARTED
+                    // );
 
-                    if (statusNotStartedRecords.length === 1) {
-                        const recordId = statusNotStartedRecords[0].getValue(constants.STANDARD_FIELDS.FILE.INTERNAL_ID);
-                        log.debug({ title: `${strDebugTitle} - Record Search`, details: `Found single record with status ${constants.PROCESS_STATUSES.NOT_STARTED}, ID: ${recordId}` });
-                        return recordId;
-                    }
+                    // if (statusNotStartedRecords.length === 1) {
+                    //     const recordId = statusNotStartedRecords[0].getValue(constants.STANDARD_FIELDS.FILE.INTERNAL_ID);
+                    //     log.debug({ title: `${strDebugTitle} - Record Search`, details: `Found single record with status ${constants.PROCESS_STATUSES.NOT_STARTED}, ID: ${recordId}` });
+                    //     return recordId;
+                    // }
 
                     if (isValidString(billNumber)) {
                         const billNumberRecords = searchResults.filter(result =>
@@ -410,13 +414,43 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
             }
         };
 
+        const getFileId = (fileName) => {
+            try {
+                log.debug({ title: `${strDebugTitle} - getFileId`, details: `Searching for file with name: ${fileName}` });
+                var folderId = getFileFolderID(constants.FOLDER_IDS.LSTCAPTURE_FILES);
+                log.debug({ title: `${strDebugTitle} - getFileId`, details: `Folder ID: ${folderId}` });
+                const searchResults = search.create({
+                    type: 'file',
+                    filters: [
+                        ["name", "is", fileName],
+                        'AND',
+                        ['folder', 'is', folderId]
+                    ],
+                    columns: [constants.STANDARD_FIELDS.FILE.INTERNAL_ID]
+                }).run().getRange({ start: 0, end: 1 });
+                log.debug({ title: `${strDebugTitle} - getFileId`, details: `Found ${searchResults.length} files for name: ${fileName}` });
+                if (searchResults.length > 0) {
+                    const fileId = searchResults[0].getValue(constants.STANDARD_FIELDS.FILE.INTERNAL_ID
+                    );
+                    log.debug({ title: `${strDebugTitle} - getFileId`, details: `File ID: ${fileId}` });
+                    return fileId;
+                } else {
+                    log.debug({ title: `${strDebugTitle} - getFileId`, details: `No file found for name: ${fileName}` });
+                    return "";
+                }
+            } catch (err) {
+                log.error({ title: `${strDebugTitle} - getFileId Error`, details: err.message });
+                return "";
+            }
+        };
+
+
         const setFieldValue = (recordObj, fieldId, value, dateFormat) => {
             const field = recordObj.getField({ fieldId });
             if (!field) {
                 log.error({ title: `${strDebugTitle} - setFieldValue`, details: `Field ${fieldId} does not exist` });
                 return;
             }
-
             try {
                 if (field.type === "date") {
                     const formattedDate = getJSDateFormat(value, dateFormat);
@@ -439,7 +473,7 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
             try {
                 const searchResults = search.create({
                     type: search.Type.FOLDER,
-                    filters: [[constants.STANDARD_FIELDS.FILE.NAME, "is", folderName]],
+                    filters: [[constants.STANDARD_FIELDS.FILE.NAME, 'is', folderName]],
                     columns: [constants.STANDARD_FIELDS.FILE.INTERNAL_ID]
                 }).run().getRange({ start: 0, end: 1 });
 
@@ -448,10 +482,10 @@ define(['N/url', 'N/file', 'N/encode', 'N/search', 'N/record', 'N/config', './ls
                 }
 
                 const folderRecord = record.create({ type: record.Type.FOLDER, isDynamic: true });
-                folderRecord.setValue(constants.STANDARD_FIELDS.FILE.NAME, folderName);
-                const folderId = folderRecord.save();
-                log.debug({ title: `${strDebugTitle} - Folder`, details: `Created Folder ID: ${folderId}` });
-                return folderId;
+                folderRecord.setValue({ fieldId: constants.STANDARD_FIELDS.FILE.NAME, value: folderName });
+                const FileFolderId = folderRecord.save();
+                log.debug({ title: `${strDebugTitle} - Folder`, details: `Created Folder ID: ${FileFolderId}` });
+                return FileFolderId;
             } catch (err) {
                 log.error({ title: `${strDebugTitle} - getFileFolderID Error`, details: err.message });
                 return "";
